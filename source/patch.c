@@ -71,6 +71,16 @@ void patch_dol(struct rrc_dol *dol, void (*dc_flush_range)(void *, u32))
         dc_flush_range((void *)to, size);
     }
 
+    /* Gecko code to quickly skip the wiimote splash screen (see https://mariokartwii.com/showthread.php?tid=1349) */
+    *(u32 *)0x800077C8 = 0x4E800020;
+
+    /*
+        Magic branches to execute loader.pul.
+        Should be set via the xml in the final release - these are hardcoded PAL values.
+    */
+    //*(u32 *)0x80242698 = 0x4BDC1968;
+    //*(u32 *)0x8000A3F4 = 0x4bff9c0c;
+
     ((void (*)())dol->entry_point)();
 
     // We shouldn't really return from the entry_point call, but if for some reason it happens,

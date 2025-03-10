@@ -20,6 +20,9 @@
 #include <gccore.h>
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <fat.h>
 
 #include "patch.h"
 #include "util.h"
@@ -123,8 +126,81 @@ check_cover_register:
 #undef DISKCHECK_DELAY
 }
 
-void rrc_loader_load(void *dol, void *bi2_dest, u32 mem1_hi, u32 mem2_hi)
+void rrc_loader_load(struct rrc_dol *dol, void *bi2_dest, u32 mem1_hi, u32 mem2_hi)
 {
+
+    IRQ_Disable();
+
+    /*
+        First - load Code.pul to where loader.pul can read it.
+        We agreed to use 0x93500000 for this.
+    */
+
+#define CODE_PUL_PATH "RetroRewind6/Binaries/Code.pul" // TODO: read this from XML
+#define MEM2_END 0x93500000                            // TODO: read this from XML
+
+    rrc_dbg_printf("patch " CODE_PUL_PATH " \n");
+
+    /*
+        We load Code.pul from the SD card to the end of MEM2.
+        We changed the end of MEM2 from its default to a lower value so it is not overwritten when the game runs.
+    */
+    rrc_dbg_printf("open " CODE_PUL_PATH " \n");
+    FILE *file = fopen(CODE_PUL_PATH, "r");
+    RRC_ASSERT(file != NULL, "fopen " CODE_PUL_PATH);
+    int fd = fileno(file);
+
+    rrc_dbg_printf("stat " CODE_PUL_PATH " \n");
+    struct stat statbuf;
+    int res = stat(CODE_PUL_PATH, &statbuf);
+    RRC_ASSERTEQ(res, 0, "stat " CODE_PUL_PATH);
+
+    /* Read Code.pul to where it should live... */
+    int sz = statbuf.st_size;
+    rrc_dbg_printf("code.pul size: %i bytes\n", sz);
+    rrc_dbg_printf("read " CODE_PUL_PATH " \n");
+    read(fd, (void *)MEM2_END, sz);
+
+    res = close(fd);
+    RRC_ASSERTEQ(res, 0, "close " CODE_PUL_PATH);
+
+    /*
+        Repeat this for Loader.pul now.
+    */
+
+#define LOADER_PUL_PATH "RetroRewind6/Binaries/Loader.pul" // TODO: read this from XML
+#define LOADER_PUL_OFF 0x80004000                          // TODO: read this from XML
+
+    rrc_dbg_printf("patch " LOADER_PUL_PATH " \n");
+
+    rrc_dbg_printf("open " LOADER_PUL_PATH " \n");
+    file = fopen(LOADER_PUL_PATH, "r");
+    RRC_ASSERT(fd > 0, "fopen " LOADER_PUL_PATH);
+
+    rrc_dbg_printf("stat " LOADER_PUL_PATH " \n");
+    struct stat statbuf2;
+    fd = fileno(file);
+    res = stat(LOADER_PUL_PATH, &statbuf2);
+    RRC_ASSERTEQ(res, 0, "stat " LOADER_PUL_PATH);
+
+    /* Read Loader.pul to where it should live... */
+    rrc_dbg_printf("read " LOADER_PUL_PATH " \n");
+    u8 buf[4096];
+    int bytes_read = read(fd, buf, sz);
+
+    rrc_dbg_printf("read %i bytes\n", bytes_read);
+
+    memcpy((void *)((u32)dol + dol->section[0]), buf, bytes_read);
+
+    printf("\n");
+    res = close(fd);
+    RRC_ASSERTEQ(res, 0, "close " LOADER_PUL_PATH);
+
+    rrc_dbg_printf("unmount sd\n");
+    fatUnmount("sd");
+
+    rrc_dbg_printf("patch dol\n");
+
     // Addresses are taken from <https://wiibrew.org/wiki/Memory_map> for the most part.
 
     *(u32 *)0xCD006C00 = 0x00000000;           // Reset `AI_CONTROL` to fix audio
@@ -135,10 +211,10 @@ void rrc_loader_load(void *dol, void *bi2_dest, u32 mem1_hi, u32 mem2_hi)
     *(u32 *)0x800000F8 = 0x0E7BE2C0;           // Console Bus Speed
     *(u32 *)0x800000FC = 0x2B73A840;           // Console CPU Speed
     *(u32 *)0x80003110 = mem1_hi;              // MEM1 Arena End
-    *(u32 *)0x80003124 = 0x90000800;           // Usable MEM2 Start
-    *(u32 *)0x80003128 = mem2_hi;              // Usable MEM2 End
     *(u32 *)0x80003180 = *(u32 *)(0x80000000); // Game ID
     *(u32 *)0x80003188 = *(u32 *)(0x80003140); // Minimum IOS Version
+    *(u32 *)0x80003124 = 0x90000800;           // Usable MEM2 Start
+    *(u32 *)0x80003128 = MEM2_END;             // Usable MEM2 End
 
     if (*(u32 *)((u32)bi2_dest + 0x30) == 0x7ED40000)
     {
@@ -151,7 +227,7 @@ void rrc_loader_load(void *dol, void *bi2_dest, u32 mem1_hi, u32 mem2_hi)
     DCStoreRange((void *)0x80000000, 0x3400);
     ICInvalidateRange((void *)0x80000000, 0x3400);
 
-    // The last step is to copy the sections from the safe space to where they actually need to be.
+    // The last step is to copy the DOL sections from the safe space to where they actually need to be.
     // This requires copying the function itself to the safe address space so we don't overwrite ourselves.
     // It also needs to call `DCFlushRange` but cannot reference it in the function, so we copy it and pass it as a function pointer.
     // See patch.c comment for a more detailed explanation.
@@ -172,8 +248,6 @@ void rrc_loader_load(void *dol, void *bi2_dest, u32 mem1_hi, u32 mem2_hi)
     {
         IOS_CloseAsync(i, 0, 0);
     }
-
-    IRQ_Disable();
 
     // Set the stack pointer to the safe address space so we don't overwrite local variables when copying sections.
     u32 new_sp = 0x808ffa00;

@@ -25,6 +25,10 @@
 #include <wiisocket.h>
 #include <ogc/wiilaunch.h>
 #include <string.h>
+#include <fat.h>
+
+#include <unistd.h>
+#include <dirent.h>
 
 #include "util.h"
 #include "shutdown.h"
@@ -49,7 +53,7 @@ void *wiisocket_init_thread_callback(void *res)
 static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
 
-void video_init()
+void init()
 {
     // Initialise the video system
     VIDEO_Init();
@@ -62,7 +66,7 @@ void video_init()
     // Initialise the console, required for printf
     console_init(xfb, 20, 20, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
     // SYS_STDIO_Report(true);
-    // Set up the video registers with the chosen mode
+    //  Set up the video registers with the chosen mode
     VIDEO_Configure(rmode);
     // Tell the video hardware where our display memory is
     VIDEO_SetNextFramebuffer(xfb);
@@ -74,13 +78,18 @@ void video_init()
     VIDEO_WaitVSync();
     if (rmode->viTVMode & VI_NON_INTERLACE)
         VIDEO_WaitVSync();
+
+    RRC_ASSERTEQ(fatInitDefault(), true, "fatInitDefault()");
 }
 
 int main(int argc, char **argv)
 {
     s64 systime_start = gettime();
     // response codes for various library functions
-    int res;
+    int res, fd;
+
+    // init video and console, mount SD card
+    init();
 
     // handles pressing the home button to exit
     rrc_dbg_printf("spawn shutdown background thread\n");
@@ -95,9 +104,6 @@ int main(int argc, char **argv)
     res = LWP_CreateThread(&wiisocket_thread, wiisocket_init_thread_callback, &wiisocket_res, NULL, 0, RRC_LWP_PRIO_IDLE);
     RRC_ASSERTEQ(res, RRC_LWP_OK, "LWP_CreateThread for wiisocket init");
 
-    // init video, setup console framebuffer
-    video_init();
-
     // seek to start
     printf("\x1b[0;0H");
 
@@ -106,7 +112,7 @@ int main(int argc, char **argv)
     RRC_ASSERTEQ(res, WPAD_ERR_NONE, "WPAD_Init");
 
     rrc_dbg_printf("init disk drive\n");
-    int fd = rrc_di_init();
+    fd = rrc_di_init();
     RRC_ASSERT(fd != 0, "rrc_di_init");
 
     /*  We should load Mario Kart Wii before doing anything else */
@@ -171,6 +177,7 @@ int main(int argc, char **argv)
     rrc_dbg_printf("Entrypoint at %x\n", dol->entry_point);
     rrc_dbg_printf("BSS Addr: %x\n", dol->bss_addr);
     rrc_dbg_printf("BSS size: %d\n", dol->bss_size);
+
     for (u32 i = 0; i < RRC_DOL_SECTION_COUNT; i++)
     {
         if (dol->section_size[i] == 0)
@@ -190,6 +197,8 @@ int main(int argc, char **argv)
             data_header->dol_offset + (dol->section[i] >> 2));
         RRC_ASSERTEQ(res, RRC_DI_LIBDI_OK, "rrc_di_read section");
     }
+
+    printf("BSS: %x, sz: %x\n", dol->bss_addr, dol->bss_size);
 
     u32 mem1_hi = 0x81800000;
     u32 mem2_hi = *(u32 *)0x80003128;

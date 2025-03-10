@@ -45,7 +45,7 @@ static void *rrc_shutdown_handler(void *)
         VIDEO_WaitVSync();
     }
 
-    rrc_dbg_printf("end of shutdown handler");
+    rrc_dbg_printf("end of shutdown handler\n");
     return NULL;
 }
 

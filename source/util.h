@@ -33,7 +33,7 @@
 #define _RRC_STRING(s) #s
 
 #ifndef RRC_EXIT_DELAY
-#define RRC_EXIT_DELAY 1000000
+#define RRC_EXIT_DELAY 3000000
 #endif
 
 #define RRC_LWP_PRIO_IDLE 0
@@ -76,6 +76,7 @@
     do                       \
     {                        \
         printf(__VA_ARGS__); \
+        usleep(500000);      \
     } while (0);
 
 #else
