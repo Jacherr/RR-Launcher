@@ -71,6 +71,14 @@ u32 rrc_privilege_read_vu32(u32 *addr)
     return *(volatile u32 *)((u32)addr | 0xC0000000);
 }
 
+void rrc_privilege_mask_vu32(u32 *addr, u32 clear, u32 set)
+{
+    u32 temp = rrc_privilege_read_vu32(addr);
+    temp &= ~clear;
+    temp |= set;
+    rrc_privilege_write_vu32(addr, temp);
+}
+
 struct rrc_result rrc_privilege_send_exploit()
 {
     if (_rrc_privilege_is_dolphin())
@@ -161,6 +169,38 @@ struct rrc_result rrc_privilege_send_exploit()
         }
 
         usleep(1000);
+    }
+
+    return rrc_result_success;
+}
+
+struct rrc_result rrc_privilege_close_exploit(bool due_to_error)
+{
+    // Remove bus access - essentially revert the changes made by the exploit
+    // We don't need to do this on Starlet since we granted PPC access to do this when
+    // we did the exploit.
+    rrc_privilege_mask_vu32((u32 *)0x0D800060, 0x08, 0);
+    rrc_privilege_mask_vu32((u32 *)0x0D800064, 0x00000DFE, 0);
+    rrc_privilege_mask_vu32((u32 *)0x0D800064, 0x80000000, 0);
+
+    // Send finished message to ARM
+    rrc_privilege_write_vu32((u32 *)(armstage1 + 8), 1);
+
+    // If there was an error, bail early since we can't even guarantee Starlet will
+    // ever respond
+    if (due_to_error)
+    {
+        return rrc_result_success;
+    }
+
+    rrc_time_tick now = gettime();
+    // Wait for response from ARM
+    while (rrc_privilege_read_vu32((u32 *)(armstage1 + 8)) != 2)
+    {
+        if (diff_msec(now, gettime()) >= 1000)
+        {
+            return rrc_result_create_error_io("Exploit reset failed: timeout waiting for response from Starlet");
+        }
     }
 
     return rrc_result_success;

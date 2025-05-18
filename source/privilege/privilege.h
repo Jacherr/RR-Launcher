@@ -35,4 +35,12 @@
 */
 struct rrc_result rrc_privilege_send_exploit();
 
+/*
+    Resets registers to disable the exploit.
+
+    `due_to_error' can be set if we are closing due to an error occurring
+    during use of the exploit. This skips some parts of the closing process.
+*/
+struct rrc_result rrc_privilege_close_exploit(bool due_to_error);
+
 #endif
