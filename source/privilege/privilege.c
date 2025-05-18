@@ -144,7 +144,7 @@ struct rrc_result rrc_privilege_send_exploit()
     if (exres != 0)
     {
         // Tell Starlet we are done - this writes to MESSAGE_VALUE
-        WriteVU32(&armstage1[8], 1);
+        rrc_privilege_write_vu32(&armstage1[8], 1);
 
         char out[64];
         snprintf(out, sizeof(out), "Exploit failed: IOS_Ioctlv returned %i", exres);
