@@ -4,7 +4,7 @@
     This code is adapted from the Homebrew channel.
     See: https://github.com/fail0verflow/hbc/blob/master/wiipax/stub/exception_asm.s
 
-    Copyright (C) fail0verflow/Team Twiizers  and all contributors. Licensed under
+    Copyright (C) fail0verflow/Team Twiizers and all contributors. Licensed under
     GPL-2-or-later. See <https://www.gnu.org/licenses/> for license details.
 
     2025-04-14 (Jacherr) - Updated label names and routine name called into in C code.

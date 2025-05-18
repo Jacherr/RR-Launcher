@@ -103,6 +103,16 @@ struct rrc_result rrc_result_create_error_corrupted_rr_xml(const char *context)
     return res;
 }
 
+struct rrc_result rrc_result_create_error_io(const char *context)
+{
+    struct rrc_result res;
+
+    res.errtype = ESOURCE_IO;
+    res.context = context;
+
+    return res;
+}
+
 bool rrc_result_is_error(struct rrc_result *result)
 {
     return result != NULL && result->errtype != ESOURCE_NONE;
@@ -149,6 +159,8 @@ char *rrc_result_strerror(struct rrc_result *result)
     }
     case ESOURCE_CORRUPTED_RR_XML:
         return "Invalid or corrupted RetroRewind6.xml.";
+    case ESOURCE_IO:
+        return "Input or output error.";
     default:
         return NULL;
     }

@@ -45,7 +45,9 @@ enum rrc_result_error_source
     ESOURCE_SD_CARD,
     /* Failure to initialise network */
     ESOURCE_WIISOCKET_INIT,
-    ESOURCE_CORRUPTED_RR_XML
+    ESOURCE_CORRUPTED_RR_XML,
+    /* Generic IO (IOS or otherwise) error */
+    ESOURCE_IO
 };
 
 /* Because each library uses their own set of error codes, we need to support all
@@ -128,6 +130,8 @@ struct rrc_result rrc_result_create_error_corrupted_versionfile(const char *cont
 struct rrc_result rrc_result_create_error_misc_update(const char *context);
 
 struct rrc_result rrc_result_create_error_corrupted_rr_xml(const char *context);
+
+struct rrc_result rrc_result_create_error_io(const char *context);
 
 /* Returns true if this result is an error, false otherwise. */
 bool rrc_result_is_error(struct rrc_result *result);
