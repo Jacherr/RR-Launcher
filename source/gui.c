@@ -26,8 +26,8 @@
 
 #define _RRC_GUI_CON_START_X_4_3 70
 #define _RRC_GUI_CON_START_Y_4_3 114
-#define _RRC_GUI_CON_WIDTH_4_3 570
-#define _RRC_GUI_CON_HEIGHT_4_3 420
+#define _RRC_GUI_CON_WIDTH_4_3 502
+#define _RRC_GUI_CON_HEIGHT_4_3 300
 
 void rrc_gui_xfb_alloc(void **xfb, bool sys_stdio_report)
 {
@@ -55,7 +55,8 @@ void rrc_gui_display_con(void *xfb, bool clear_console)
     VIDEO_SetNextFramebuffer(xfb);
     // Make the display visible
     VIDEO_SetBlack(false);
-    VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
+    if (clear_console)
+        VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
     // Flush the video register changes to the hardware
     VIDEO_Flush();
     // Wait for Video setup to complete

@@ -34,9 +34,11 @@
 #include <gccore.h>
 #include <ogc/wiilaunch.h>
 
+#include "shutdown.h"
 #include "exception.h"
 #include "console.h"
 #include "gui.h"
+#include "time.h"
 
 extern char exception_catch_start, exception_catch_end;
 
@@ -108,7 +110,7 @@ void _handle_exception(int exception)
         x++;
     }
 
-    usleep(EXCEPTION_DISPLAY_TIME_SEC * 1000 * 1000);
+    rrc_usleep(EXCEPTION_DISPLAY_TIME_SEC * 1000 * 1000);
 
     for (;;)
         _exit(-1);
@@ -134,7 +136,7 @@ void init_exception_handlers()
 
     for (vector = 0x100; vector < 0x800; vector += 0x10)
     {
-        /* ingore IRQs */
+        /* ignore IRQs */
         if (vector < 0x500 || vector >= 0x600)
         {
             u32 *instr = (u32 *)(0x80000000 + vector);

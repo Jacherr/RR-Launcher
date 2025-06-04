@@ -30,12 +30,13 @@
 #include <sys/statvfs.h>
 #include <errno.h>
 
+#include "shutdown.h"
 #include "util.h"
 #include "di.h"
 #include "time.h"
 #include "loader.h"
-#include "../shared/dol.h"
-#include "../shared/riivo.h"
+#include <dol.h>
+#include <riivo.h>
 #include "console.h"
 #include "settings.h"
 #include "update/versionsfile.h"
@@ -47,6 +48,7 @@
 #include "result.h"
 #include "exception.h"
 #include "sd.h"
+#include "pad.h"
 
 /* 100ms */
 #define DISKCHECK_DELAY 100000
@@ -57,6 +59,8 @@ int main(int argc, char **argv)
     // Use a version used by the game that is known to work with pulsar.
     // FIXME: try to use the disk's IOS version?
     RRC_ASSERTEQ(IOS_ReloadIOS(37), 0, "Failed to reload IOS");
+
+    rrc_shutdown_register_callbacks();
 
     // We reserve ~1MB of MEM1 upfront for the runtime-ext dol.
     u32 mem1_hi = 0x81744260;
@@ -84,6 +88,42 @@ int main(int argc, char **argv)
     RRC_ASSERTEQ(res, 1, "PAD_Init");
     res = WPAD_Init();
     RRC_ASSERTEQ(res, WPAD_ERR_NONE, "WPAD_Init");
+
+    FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "r");
+    if (afd == NULL)
+    {
+        char *lines[] = {
+            "- - - WARNING - - -",
+            "This channel is still experimental and may have bugs.",
+            "",
+            "By continuing, you accept that there is NO WARRANTY",
+            "associated with this software, express or implied.",
+            "",
+            "This includes crashes, false-positive online bans,",
+            "incorrect or corrupted assets, corruption of installation,",
+            "loss of data, or potential system inoperability."};
+
+        enum rrc_prompt_result result = rrc_prompt_2_options(xfb, lines, 9, "I Accept", "Close Launcher", RRC_PROMPT_RESULT_OK, RRC_PROMPT_RESULT_CANCEL);
+        if (result == RRC_PROMPT_RESULT_CANCEL)
+        {
+            exit(0);
+        }
+
+        FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "w");
+        if (afd == NULL)
+        {
+            struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to create acceptance file. The SD card may be locked.");
+            rrc_result_error_check_error_normal(&err, xfb);
+        }
+        else
+        {
+            fclose(afd);
+        }
+    }
+    else
+    {
+        fclose(afd);
+    }
 
     rrc_con_update("Initialise DVD", 10);
     int fd = rrc_di_init();
@@ -178,23 +218,19 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < INTERRUPT_TIME / RRC_WPAD_LOOP_TIMEOUT; i++)
     {
-        PAD_ScanPads();
-        WPAD_ScanPads();
+        rrc_shutdown_check();
 
-        int wiipressed = WPAD_ButtonsDown(0);
-        int gcpressed = PAD_ButtonsDown(0);
+        struct pad_state pad = rrc_pad_buttons();
 
-        if (wiipressed & RRC_WPAD_HOME_MASK || gcpressed & PAD_BUTTON_START)
+        if (rrc_pad_home_pressed(pad))
         {
             return 0;
         }
-
-        if (wiipressed & RRC_WPAD_A_MASK || gcpressed & PAD_BUTTON_A)
+        else if (rrc_pad_a_pressed(pad))
         {
             break;
         }
-
-        if (wiipressed & RRC_WPAD_B_MASK || gcpressed & PAD_BUTTON_B)
+        else if (rrc_pad_b_pressed(pad))
         {
             struct rrc_result r;
             int out = rrc_settings_display(xfb, &stored_settings, &r);

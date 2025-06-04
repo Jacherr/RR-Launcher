@@ -1,6 +1,5 @@
 /*
-    sd.h - SD helper function declarations.
-
+    shutdown.h - Shutdown and reset handler check header
     Copyright (C) 2025  Retro Rewind Team
 
     This program is free software: you can redistribute it and/or modify
@@ -17,12 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef RRC_RUNTIME_EXT_SD
-#define RRC_RUNTIME_EXT_SD
+#ifndef RRC_SHUTDOWN_H
+#define RRC_SHUTDOWN_H
 
-#include <types.h>
+void rrc_shutdown_register_callbacks();
 
-s32 rrc_rt_sd_init();
-bool rrc_rt_sd_file_exists(const char *path);
+void rrc_shutdown_check();
 
 #endif

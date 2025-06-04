@@ -23,15 +23,17 @@
 #include <unistd.h>
 #include <ogc/wiilaunch.h>
 
+#include "shutdown.h"
 #include "console.h"
 #include "prompt.h"
 #include "util.h"
 #include "gui.h"
+#include "pad.h"
 
 #define _RRC_OPTIONS_W_PAD "         " /* 9 spaces between each option */
-#define _RRC_PROMPT_TEXT_FIRST_ROW 7
+#define _RRC_PROMPT_TEXT_FIRST_ROW 3
 #define _RRC_PROMPT_OPTIONS_PAD 1
-#define _RRC_PROMPT_LINES_MAX 10
+#define _RRC_PROMPT_LINES_MAX 12
 
 static void *prompt_xfb = NULL;
 
@@ -71,7 +73,7 @@ enum rrc_prompt_result rrc_prompt_2_options(
 {
     _rrc_prompt_xfb_setup();
 
-    if (n >= _RRC_PROMPT_LINES_MAX)
+    if (n > _RRC_PROMPT_LINES_MAX)
     {
         rrc_gui_display_con(old_xfb, false);
         return RRC_PROMPT_RESULT_ERROR;
@@ -80,7 +82,7 @@ enum rrc_prompt_result rrc_prompt_2_options(
     rrc_gui_display_con(prompt_xfb, true);
     rrc_gui_display_banner(prompt_xfb);
 
-    rrc_con_display_splash();
+    rrc_con_display_version();
 
     int cols, rows;
     CON_GetMetrics(&cols, &rows);
@@ -119,21 +121,20 @@ enum rrc_prompt_result rrc_prompt_2_options(
 
     while (1)
     {
-        PAD_ScanPads();
-        WPAD_ScanPads();
-        int wiipressed = WPAD_ButtonsDown(0);
-        int gcpressed = PAD_ButtonsDown(0);
+        rrc_shutdown_check();
 
-        if ((wiipressed & (WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT)) || (gcpressed & (PAD_BUTTON_LEFT | PAD_BUTTON_RIGHT)))
+        struct pad_state pad = rrc_pad_buttons();
+
+        if (rrc_pad_left_right_pressed(pad))
         {
             dir_pressed = 1;
             selected_option = (selected_option == option1_result ? option2_result : option1_result);
         }
-        else if (dir_pressed && (!(wiipressed & (RRC_WPAD_LEFT_MASK | RRC_WPAD_RIGHT_MASK)) || !(gcpressed & (PAD_BUTTON_LEFT | PAD_BUTTON_RIGHT))))
+        else if (dir_pressed && !rrc_pad_left_right_pressed(pad))
         {
             dir_pressed = 0;
         }
-        else if (wiipressed & RRC_WPAD_A_MASK || gcpressed & PAD_BUTTON_A)
+        else if (rrc_pad_a_pressed(pad))
         {
             break;
         }
@@ -177,7 +178,7 @@ void rrc_prompt_1_option(void *old_xfb,
 {
     _rrc_prompt_xfb_setup();
 
-    if (n >= _RRC_PROMPT_LINES_MAX)
+    if (n > _RRC_PROMPT_LINES_MAX)
     {
         rrc_gui_display_con(old_xfb, false);
         return;
@@ -186,7 +187,7 @@ void rrc_prompt_1_option(void *old_xfb,
     rrc_gui_display_con(prompt_xfb, true);
     rrc_gui_display_banner(prompt_xfb);
 
-    rrc_con_display_splash();
+    rrc_con_display_version();
 
     int cols, rows;
     CON_GetMetrics(&cols, &rows);
@@ -215,11 +216,10 @@ void rrc_prompt_1_option(void *old_xfb,
     // just wait for an A press lol
     while (1)
     {
-        WPAD_ScanPads();
-        PAD_ScanPads();
-        int wiipressed = WPAD_ButtonsDown(0);
-        int gcpressed = PAD_ButtonsDown(0);
-        if (wiipressed & RRC_WPAD_A_MASK || gcpressed & PAD_BUTTON_A)
+        rrc_shutdown_check();
+
+        struct pad_state pad = rrc_pad_buttons();
+        if (rrc_pad_a_pressed(pad))
         {
             break;
         }
