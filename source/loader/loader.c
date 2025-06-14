@@ -207,6 +207,10 @@ void rrc_loader_load(struct rrc_dol *dol, struct rrc_settingsfile *settings, voi
     if (settings->separate_savegame)
         bitflags |= RRC_BITFLAGS_SAVEGAME;
 
+    /* Reset some flags */
+    bitflags &= ~RRC_BITFLAGS_RR_CRASHED;
+    bitflags &= ~RRC_BITFLAGS_LOADED_FROM_RR;
+
     *(u8 *)RRC_RR_BITFLAGS = bitflags;
     rrc_invalidate_cache((void *)RRC_SIGNATURE_ADDRESS, 5);
 

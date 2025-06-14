@@ -33,6 +33,8 @@
 #define RRC_RIIVO_DISC_PTR 0x81782fa0
 
 #define RRC_BITFLAGS_SAVEGAME 1
+#define RRC_BITFLAGS_LOADED_FROM_RR 2
+#define RRC_BITFLAGS_RR_CRASHED 4
 
 /*
     `out' should be a statically allocated string no less than 64 bytes long.

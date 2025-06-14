@@ -31,26 +31,27 @@
 #include <errno.h>
 #include <dirent.h>
 
-#include "loader/disc_loader.h"
-#include "shutdown.h"
-#include "util.h"
+#include "console.h"
+#include "crash.h"
 #include "di.h"
-#include "time.h"
+#include "exception.h"
+#include "gui.h"
+#include "loader/disc_loader.h"
 #include "loader/loader.h"
+#include "pad.h"
+#include "prompt.h"
+#include "res.h"
+#include "result.h"
+#include "sd.h"
+#include "settings.h"
+#include "settingsfile.h"
+#include "shutdown.h"
+#include "time.h"
+#include "update/update.h"
+#include "update/versionsfile.h"
+#include "util.h"
 #include <dol.h>
 #include <riivo.h>
-#include "console.h"
-#include "settings.h"
-#include "update/versionsfile.h"
-#include "update/update.h"
-#include "prompt.h"
-#include "gui.h"
-#include "res.h"
-#include "settingsfile.h"
-#include "result.h"
-#include "exception.h"
-#include "sd.h"
-#include "pad.h"
 
 /* 100ms */
 #define DISKCHECK_DELAY 100000
@@ -108,6 +109,13 @@ int main(int argc, char **argv)
     RRC_ASSERTEQ(res, 1, "PAD_Init");
     res = WPAD_Init();
     RRC_ASSERTEQ(res, WPAD_ERR_NONE, "WPAD_Init");
+
+    if((*((u8*)RRC_RR_BITFLAGS) & RRC_BITFLAGS_RR_CRASHED) == RRC_BITFLAGS_RR_CRASHED)    
+    {
+        // TODO: define the flags in a header or something
+        // if we get here we returned from a crash
+        rrc_crash_handle(xfb);
+    }
 
     FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "r");
     if (afd == NULL)
@@ -225,7 +233,9 @@ int main(int argc, char **argv)
     }
 
     // Check for updates if the user enabled that setting.
-    if (stored_settings.auto_update)
+    // Skips this if loaded from RR.
+    if (stored_settings.auto_update 
+        && (*((u8*)RRC_RR_BITFLAGS) & RRC_BITFLAGS_LOADED_FROM_RR) != RRC_BITFLAGS_LOADED_FROM_RR)
     {
 
         int update_count;
@@ -254,7 +264,9 @@ int main(int argc, char **argv)
         {
             break;
         }
-        else if (rrc_pad_b_pressed(pad))
+        // Fall straight to here if loaded from RR
+        else if (rrc_pad_b_pressed(pad)
+                    || (*((u8*)RRC_RR_BITFLAGS) & RRC_BITFLAGS_LOADED_FROM_RR) == RRC_BITFLAGS_LOADED_FROM_RR)
         {
             struct rrc_result r;
             int out = rrc_settings_display(xfb, &stored_settings, &r);
