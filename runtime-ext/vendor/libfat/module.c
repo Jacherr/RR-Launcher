@@ -22,5 +22,4 @@
  * SOFTWARE.
  */
 
-#include <bslug.h>
 #include <io/fat.h>

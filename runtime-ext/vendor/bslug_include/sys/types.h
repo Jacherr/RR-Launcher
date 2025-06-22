@@ -1,6 +1,6 @@
-/* main.c
+/* sys/types.h
  *   by Alex Chadwick
- *
+ * 
  * Copyright (C) 2014, Alex Chadwick
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,4 +22,23 @@
  * SOFTWARE.
  */
 
-#include <io/libsd.h>
+/* definitions of standard symbols in the sys/types.h header file. */
+
+#ifndef _SYS_TYPES_H_
+#define _SYS_TYPES_H_
+
+#include <stdint.h>
+
+typedef	unsigned int    ino_t;
+typedef long            off_t;
+typedef short           dev_t;
+typedef unsigned short  uid_t;
+typedef unsigned short  gid_t;
+typedef int             ssize_t;
+typedef unsigned int    mode_t;
+typedef unsigned short  nlink_t;
+typedef uint64_t        time_t;
+typedef uint32_t        fsblkcnt_t;
+typedef uint32_t        fsfilcnt_t;
+
+#endif /* _SYS_TYPES_H_ */

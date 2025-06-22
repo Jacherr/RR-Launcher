@@ -1,6 +1,6 @@
-/* main.c
+/* OSUtf.h
  *   by Alex Chadwick
- *
+ * 
  * Copyright (C) 2014, Alex Chadwick
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,4 +22,19 @@
  * SOFTWARE.
  */
 
-#include <io/libsd.h>
+/* definitions of symbols inferred to exist in the OSUtf.h header file for
+ * which the brainslug symbol information is available. */
+
+#ifndef _RVL_OSUTF_H_
+#define _RVL_OSUTF_H_
+
+/* Converts the utf8 encoded character at utf8 to a 32 bit utf32 integer and
+ * stores it at utf32. Returns utf8 advanced by the number of characters read on
+ * success, or NULL on error. If utf8 points to the NULL character, it returns
+ * utf8. */
+char *OSUTF8to32(const char *utf8, int *utf32);
+/* Converts the utf32 character to a single byte ANSI character. Returns '\0' on
+ * error. */
+char OSUTF32toANSI(int utf32);
+
+#endif /* _RVL_OSUTF_H_ */

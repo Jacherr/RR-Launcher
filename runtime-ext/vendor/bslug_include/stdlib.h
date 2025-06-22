@@ -1,6 +1,6 @@
-/* main.c
+/* stdlib.h
  *   by Alex Chadwick
- *
+ * 
  * Copyright (C) 2014, Alex Chadwick
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,4 +22,12 @@
  * SOFTWARE.
  */
 
-#include <io/libsd.h>
+/* definitions of standard symbols in the stdlib.h header file for which the
+ * brainslug symbol information is available. */
+
+#ifndef _STDLIB_H_
+#define _STDLIB_H_
+
+#define MB_CUR_MAX 6
+
+#endif /* _STDLIB_H_ */

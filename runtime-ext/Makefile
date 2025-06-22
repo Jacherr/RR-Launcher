@@ -15,7 +15,7 @@ OFILES := $(addprefix build/,$(CFILES:.c=.o))
 # Prevent deletion of .o files, helps with incr rebuilds
 .SECONDARY: $(OFILES)
 
-INCLUDE := -I$(DEVKITPRO)/bslug/include -I../shared -Ivendor
+INCLUDE := -I../shared -Ivendor -Ivendor/bslug_include
 CFLAGS	:= -nostdlib -mno-eabi -O2 -Wall $(MACHDEP) $(INCLUDE)
 
 LINKERSCRIPTS := $(wildcard linker-*.ld)
