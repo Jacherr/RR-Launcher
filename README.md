@@ -9,7 +9,7 @@ The channel aims to provide three main features:
 - Functionality to update Retro Rewind, and (optionally) automatically check for updates.
 - Provide basic configuration including language and "My Stuff" (for custom assets).
 
-The channel makes use of a simple text-based interface enclosed in a decorative banner. 
+The channel makes use of a simple text-based interface enclosed in a decorative banner.
 This is a stylistic choice intended to keep the dependency stack lightweight and the launcher itself performant.
 This style is heavily influenced by existing similar designs such as [YAWM ModWii Edition](https://github.com/modmii/YAWM-ModMii-Edition).
 
@@ -35,11 +35,11 @@ The channel is designed to be simple, but its code does contain some novel featu
 
 In order to build this project, you need:
 
-- [DevkitPro](https://devkitpro.org/wiki/Getting_Started), specifically all packages in the `wii-dev` and `ppc-dev` groups.
-- Additional libraries: libcurl and brainslug (the `install-libs.sh` script can install them for you)
+- [DevkitPro](https://devkitpro.org/wiki/Getting_Started), specifically all packages in the `wii-dev`, `ppc-dev` and `ppc-portlibs` groups.
+- Additional libraries: libcurl (the `install-libs.sh` script can install them for you)
 
 This project uses a `Makefile` for building the project: running `make` in the root directory will build the project and produce a `RR-Launcher.dol` file (the main DOL that starts the channel),
-as well as `runtime-ext/runtime-ext-*.dol` files, where * is all supported region codes. This file is loaded before the game and contains patched DVD functions to load RR code from the SD card.
+as well as `runtime-ext/runtime-ext-*.dol` files, where \* is all supported region codes. This file is loaded before the game and contains patched DVD functions to load RR code from the SD card.
 
 ### Contributing
 
