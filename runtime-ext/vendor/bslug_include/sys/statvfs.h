@@ -1,6 +1,6 @@
-/* main.c
+/* sys/statvfs.h
  *   by Alex Chadwick
- *
+ * 
  * Copyright (C) 2014, Alex Chadwick
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,4 +22,28 @@
  * SOFTWARE.
  */
 
-#include <io/libsd.h>
+/* definitions of standard symbols in the sys/statvfs.h header file. */
+
+#ifndef _SYS_STATVFS_H_
+#define _SYS_STATVFS_H_
+
+#include <sys/types.h>
+
+struct statvfs {
+	unsigned long f_bsize;
+	unsigned long f_frsize;
+	fsblkcnt_t f_blocks;
+	fsblkcnt_t f_bfree;
+	fsblkcnt_t f_bavail;
+	fsfilcnt_t f_files;
+	fsfilcnt_t f_ffree;
+	fsfilcnt_t f_favail;
+	unsigned long f_fsid;
+	unsigned long f_flag;
+	unsigned long f_namemax;
+};
+
+#define ST_RDONLY 0x0001
+#define ST_NOSUID 0x0002
+
+#endif /* _SYS_STATVFS_H_ */

@@ -121,6 +121,7 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
     *mem1 -= sizeof(struct rrc_riivo_disc_replacement) * MAX_FILE_PATCHES;
     *mem1 -= sizeof(struct rrc_riivo_disc);
     struct rrc_riivo_disc *riivo_disc = (void *)*mem1;
+    riivo_disc->count = 0;
     // Reserve space for memory patches. Note: they don't actually need to be reserved in MEM1,
     // because it's only shortly needed in patch.c and never again at runtime.
     *mem1 -= sizeof(struct rrc_riivo_memory_patch) * MAX_MEMORY_PATCHES;

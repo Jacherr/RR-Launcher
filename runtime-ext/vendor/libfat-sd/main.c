@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 
-#include <bslug.h>
 #include <errno.h>
 #include <io/fat-sd.h>
 #include <io/libsd.h>

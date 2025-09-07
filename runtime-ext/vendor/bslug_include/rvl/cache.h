@@ -1,6 +1,6 @@
-/* main.c
+/* rvl/cache.h
  *   by Alex Chadwick
- *
+ * 
  * Copyright (C) 2014, Alex Chadwick
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,4 +22,16 @@
  * SOFTWARE.
  */
 
-#include <io/libsd.h>
+/* definitions of standard symbols typically in the ogc/cache.h header file for
+ * which the brainslug symbol information is available. */
+ 
+#ifndef _RVL_CACHE_H_
+#define _RVL_CACHE_H_
+
+#include <stddef.h> /* for size_t */
+
+void DCFlushRange(const void *start, size_t length);
+
+void ICInvalidateRange(const void *start, size_t length);
+
+#endif /* _RVL_CACHE_H_ */
