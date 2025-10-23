@@ -75,7 +75,6 @@ static char *save_label = "Save changes";
 static char *changes_saved_status = RRC_CON_ANSI_FG_GREEN "Changes saved." RRC_CON_ANSI_CLR;
 static char *changes_not_saved_status = RRC_CON_ANSI_BG_BRIGHT_RED "Error saving changes." RRC_CON_ANSI_CLR;
 
-static char *my_stuff_label = "My Stuff";
 static char *savegame_label = "Separate savegame";
 static char *autoupdate_label = "Automatic updates";
 
@@ -200,18 +199,12 @@ enum rrc_settings_result rrc_settings_display(void *xfb, struct rrc_settingsfile
         {.type = ENTRY_TYPE_BUTTON, .label = manage_channel_installation_label, .margin_top = 1},
 
         {.type = ENTRY_TYPE_SELECT,
-         .label = my_stuff_label,
-         .options = my_stuff_options,
-         .selected_option = &stored_settings->my_stuff,
-         .initial_selected_option = stored_settings->my_stuff,
-         .option_count = my_stuff_options_count,
-         .margin_top = 1},
-        {.type = ENTRY_TYPE_SELECT,
          .label = savegame_label,
          .options = savegame_options,
          .selected_option = &stored_settings->separate_savegame,
          .initial_selected_option = stored_settings->separate_savegame,
-         .option_count = savegame_options_count},
+         .option_count = savegame_options_count,
+         .margin_top = 1},
         {.type = ENTRY_TYPE_SELECT,
          .label = autoupdate_label,
          .options = autoupdate_options,
