@@ -23,9 +23,11 @@
 #include <gctypes.h>
 #include "result.h"
 
-#define RRC_SETTINGSFILE_DEFAULT 0            /* disabled */
-#define RRC_SETTINGSFILE_AUTOUPDATE_DEFAULT 1 /* enabled */
-#define RRC_SETTINGSFILE_PACK_ENABLED_VALUE 1
+#define RRC_SETTINGSFILE_DEFAULT 0                   /* disabled */
+#define RRC_SETTINGSFILE_MY_STUFF_DEFAULT 0          /* disabled */
+#define RRC_SETTINGSFILE_SEPARATE_SAVEGAME_DEFAULT 1 /* enabled */
+#define RRC_SETTINGSFILE_AUTOUPDATE_DEFAULT 1        /* enabled */
+#define RRC_SETTINGSFILE_PACK_ENABLED_VALUE 1        /* enabled */
 
 enum rrc_settingsfile_status
 {
