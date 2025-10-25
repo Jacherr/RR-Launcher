@@ -17,15 +17,21 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+PHDRS {
+    # define a separate program header for the relevant symbols we want to expose at fixed addresses,
+    # otherwise ld merges them together with bss which confuses elf2dol
+    dvd PT_LOAD;
+}
+
 SECTIONS {
     # .init, .text and .rodata are specified in Makefile LDFLAGS
-    .sd_vtable                    0x81782e00 : { *(.sd_vtable) }
-    .dvd_convert_path_to_entrynum 0x81782e60 : { *(.dvd_convert_path_to_entrynum) }
-    .dvd_open                     0x81782ea0 : { *(.dvd_open) }
-    .dvd_fast_open                0x81782ee0 : { *(.dvd_fast_open) }
-    .dvd_read_prio                0x81782f20 : { *(.dvd_read_prio) }
-    .dvd_close                    0x81782f60 : { *(.dvd_close) }
-    .riivo_disc_ptr               0x81782fa0 : { *(.riivo_disc_ptr) }
+    .sd_vtable                    0x81782e00 : { *(.sd_vtable) }                    :dvd
+    .dvd_convert_path_to_entrynum 0x81782e60 : { *(.dvd_convert_path_to_entrynum) } :dvd
+    .dvd_open                     0x81782ea0 : { *(.dvd_open) }                     :dvd
+    .dvd_fast_open                0x81782ee0 : { *(.dvd_fast_open) }                :dvd
+    .dvd_read_prio                0x81782f20 : { *(.dvd_read_prio) }                :dvd
+    .dvd_close                    0x81782f60 : { *(.dvd_close) }                    :dvd
+    .riivo_disc_ptr               0x81782fa0 : { *(.riivo_disc_ptr) }               :dvd
 
     ASSERT(ADDR(.bss) + SIZEOF(.bss) <= 0x817FFFFF, "bss section overflows mem1")
 }
