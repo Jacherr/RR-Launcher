@@ -43,7 +43,7 @@ s32 rrc_rt_sd_init()
         if (res != 0)
         {
             char buf[128];
-            snprintf(buf, sizeof(buf), "SD_chdhir failed: %d (errno:%d)\n", res, errno);
+            snprintf(buf, sizeof(buf), "SD_chdir failed: %d (errno:%d)\n", res, errno);
             RTE_FATAL(buf);
         }
         return res;

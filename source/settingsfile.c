@@ -102,8 +102,8 @@ struct rrc_result rrc_settingsfile_create()
 
 void rrc_settingsfile_init_defaults(struct rrc_settingsfile *settings)
 {
-    settings->my_stuff = RRC_SETTINGSFILE_DEFAULT;
-    settings->separate_savegame = RRC_SETTINGSFILE_DEFAULT;
+    settings->my_stuff = RRC_SETTINGSFILE_MY_STUFF_DEFAULT;
+    settings->separate_savegame = RRC_SETTINGSFILE_SEPARATE_SAVEGAME_DEFAULT;
     settings->auto_update = RRC_SETTINGSFILE_AUTOUPDATE_DEFAULT;
 }
 

@@ -229,4 +229,9 @@ void rrc_gui_video_fix(char region)
     {
         VIDEO_Configure(r_rmode);
     }
+
+    VIDEO_SetBlack(true);
+    VIDEO_Flush();
+    VIDEO_WaitVSync();
+    VIDEO_WaitVSync();
 }
