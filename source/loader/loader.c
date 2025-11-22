@@ -39,6 +39,8 @@
 #include "../exception.h"
 #include <riivo.h>
 #include "../util.h"
+#include "../settingsfile.h"
+#include <bitflags.h>
 
 /**
  * Patches the DVD functions in the game DOL to immediately jump to custom DVD functions implemented in runtime-ext.
@@ -206,6 +208,21 @@ void rrc_loader_load(struct rrc_dol *dol, struct rrc_settingsfile *settings, voi
     u8 bitflags = 0;
     if (settings->separate_savegame)
         bitflags |= RRC_BITFLAGS_SAVEGAME;
+    switch (settings->my_stuff)
+    {
+    case RRC_SETTINGSFILE_MY_STUFF_CTGP:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_CTGP;
+        break;
+    case RRC_SETTINGSFILE_MY_STUFF_RR:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_RR;
+        break;
+    case RRC_SETTINGSFILE_MY_STUFF_CTGP_MUSIC:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_CTGP_MUSIC;
+        break;
+    case RRC_SETTINGSFILE_MY_STUFF_RR_MUSIC:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_RR_MUSIC;
+        break;
+    }
 
     *(u8 *)RRC_RR_BITFLAGS = bitflags;
     rrc_invalidate_cache((void *)RRC_SIGNATURE_ADDRESS, 5);

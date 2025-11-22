@@ -29,11 +29,14 @@
 #include <stdio.h>
 #include <rvl/cache.h>
 #include <riivo.h>
+#include <bitflags.h>
 
 /**
  * Contains all <file> and <folder> replacements. Initialized in the launcher DOL based on the XML.
  */
 __attribute__((section(".riivo_disc_ptr"))) static struct rrc_riivo_disc *riivo_disc = NULL;
+
+extern u8 rrc_bitflags;
 
 #define DVD_CONVERT_PATH_TO_ENTRYNUM_ADDR 0x93400000
 #define DVD_FAST_OPEN 0x93400020
@@ -156,6 +159,60 @@ static struct rte_open_file *rte_dvd_alloc_open_file()
     RTE_FATAL("Attempted to open more than " RTE_STRINGIFY(MAX_CONCURRENT_FILES) " SD files at once!");
 }
 
+static bool starts_with(const char *str, const char *prefix)
+{
+    return strncmp(str, prefix, strlen(prefix)) == 0;
+}
+
+static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *entry_num)
+{
+    if ((rrc_bitflags & RRC_BITFLAGS_MY_STUFF_ANY) == 0)
+    {
+        // My Stuff not enabled.
+        return false;
+    }
+
+    // If My Stuff RR/CTGP music is enabled, the path must start with /sound/strm.
+    if (rrc_bitflags & RRC_BITFLAGS_MY_STUFF_ANY_MUSIC)
+    {
+        if (!starts_with(path, "/sound/strm"))
+        {
+            return false;
+        }
+    }
+
+    // Get the filename segment of the path: '/path/to/file.szs' -> 'file.szs'
+    const char *filename = strrchr(path, '/');
+    if (!filename)
+    {
+        return false;
+    }
+    filename++;
+
+    // If My Stuff RR is enabled, look for '/RetroRewind6/MyStuff/file.szs'
+    // If My Stuff CTGP is enabled, look for '/ctgpr/My Stuff/file.szs'
+    char my_stuff_path[64];
+    if (rrc_bitflags & (RRC_BITFLAGS_MY_STUFF_RR | RRC_BITFLAGS_MY_STUFF_RR_MUSIC))
+    {
+        snprintf(my_stuff_path, sizeof(my_stuff_path), "/RetroRewind6/MyStuff/%s", filename);
+    }
+    else
+    {
+        snprintf(my_stuff_path, sizeof(my_stuff_path), "/ctgpr/My Stuff/%s", filename);
+    }
+
+    if (rrc_rt_sd_file_exists(my_stuff_path))
+    {
+        RTE_DBG("Found My Stuff replacement for %s (sd path='%s')\n", filename, my_stuff_path);
+        *entry_num = rte_dvd_path_to_entrynum(my_stuff_path);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 /**
  * Attempts to resolve a DVD path to an entrynum, based on the riivo file and folder replacements.
  * Returns true and writes the entrynum to `entry_num` if a replacement was found,
@@ -164,6 +221,12 @@ static struct rte_open_file *rte_dvd_alloc_open_file()
 static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_num)
 {
     rrc_rt_sd_init();
+
+    // Try My Stuff replacements first.
+    if (rte_dvd_resolve_my_stuff_path_to_entry_num(filename, entry_num))
+    {
+        return true;
+    }
 
     for (int i = riivo_disc->count - 1; i >= 0; i--)
     {
