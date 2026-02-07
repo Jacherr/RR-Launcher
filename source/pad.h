@@ -17,6 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef RRC_PAD_H
+#define RRC_PAD_H
+
 #include <gctypes.h>
 #include <wiiuse/wpad.h>
 #include <ogc/pad.h>
@@ -89,3 +92,5 @@ inline bool rrc_pad_right_pressed(struct pad_state state)
 {
     return (state.wpad & RRC_WPAD_RIGHT_MASK) || (state.gc & PAD_BUTTON_RIGHT);
 }
+
+#endif
