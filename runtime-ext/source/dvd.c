@@ -183,11 +183,16 @@ static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *en
 
     // Get the filename segment of the path: '/path/to/file.szs' -> 'file.szs'
     const char *filename = strrchr(path, '/');
-    if (!filename)
+    if (filename)
     {
-        return false;
-    }
+        // Skip the slash itself.
     filename++;
+    }
+    else
+    {
+        // There's no slash in the path, so the whole path is simply the filename itself.
+        filename = path;
+    }
 
     // If My Stuff RR is enabled, look for '/RetroRewind6/MyStuff/file.szs'
     // If My Stuff CTGP is enabled, look for '/ctgpr/My Stuff/file.szs'
