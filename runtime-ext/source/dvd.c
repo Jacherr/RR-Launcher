@@ -30,6 +30,7 @@
 #include <rvl/cache.h>
 #include <riivo.h>
 #include <bitflags.h>
+#include "trampoline.h"
 
 /**
  * Contains all <file> and <folder> replacements. Initialized in the launcher DOL based on the XML.
@@ -37,11 +38,6 @@
 __attribute__((section(".riivo_disc_ptr"))) static struct rrc_riivo_disc *riivo_disc = NULL;
 
 extern u8 rrc_bitflags;
-
-#define DVD_CONVERT_PATH_TO_ENTRYNUM_ADDR 0x93400000
-#define DVD_FAST_OPEN 0x93400020
-#define DVD_OPEN 0x93400040
-#define DVD_READ_PRIO 0x93400060
 
 /**
  * In order to tell whether an entrynum is a special-cased SD entrynum,
@@ -186,7 +182,7 @@ static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *en
     if (filename)
     {
         // Skip the slash itself.
-    filename++;
+        filename++;
     }
     else
     {
@@ -404,8 +400,7 @@ custom_convert_path_to_entry_num_impl(const char *filename)
     }
 
     // Return to original overwritten function
-    s32 (*cb)(const char *) = (void *)DVD_CONVERT_PATH_TO_ENTRYNUM_ADDR;
-    s32 res = cb(filename);
+    s32 res = dvd_convert_path_to_entrynum_trampoline(filename);
     if ((res & SPECIAL_ENTRYNUM_MASK) == SPECIAL_ENTRYNUM)
     {
         RTE_FATAL("DVD Convert path returned special entry (%d)", res);
@@ -430,8 +425,7 @@ custom_open_impl(const char *path, FileInfo *file_info)
         return 1;
     }
 
-    s32 (*cb)(const char *, FileInfo *) = (void *)DVD_OPEN;
-    s32 res = cb(path, file_info);
+    s32 res = dvd_open_trampoline(path, file_info);
     RTE_DBG("Default DVD Open (%d) address: %d\n", res, file_info->startAddr);
     return res;
 }
@@ -449,8 +443,7 @@ custom_fast_open_impl(s32 entry_num, FileInfo *file_info)
     }
 
     // Return to original overwritten function
-    s32 (*cb)(s32, FileInfo *) = (void *)DVD_FAST_OPEN;
-    s32 res = cb(entry_num, file_info);
+    s32 res = dvd_fast_open_trampoline(entry_num, file_info);
     if (res != -1 && (file_info->startAddr & SPECIAL_ENTRYNUM_MASK) == SPECIAL_ENTRYNUM)
     {
         RTE_FATAL("Normal FastOpen() returned special bitpattern (%d)", res);
@@ -495,8 +488,7 @@ custom_read_prio_impl(FileInfo *file_info, void *buffer, s32 length, s32 offset,
         return bytes;
     }
 
-    s32 (*cb)(FileInfo *, void *, s32, s32, s32) = (void *)DVD_READ_PRIO;
-    return cb(file_info, buffer, length, offset, prio);
+    return dvd_read_prio_trampoline(file_info, buffer, length, offset, prio);
 }
 
 __attribute__((noinline)) bool

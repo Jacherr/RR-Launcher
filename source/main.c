@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     rrc_shutdown_register_callbacks();
 
     // We reserve ~1MB of MEM1 upfront for the runtime-ext dol.
-    u32 mem1_hi = 0x81744260;
+    u32 mem1_hi = RRC_RUNTIME_EXT_DOL_SAFE_START;
     u32 mem2_hi = *(u32 *)0x80003128;
 
     s64 systime_start = gettime();
@@ -339,10 +339,6 @@ interrupt_loop_end:
     s64 systime_end = gettime();
     rrc_dbg_printf("time taken: %.3f seconds\n", ((f64)diff_msec(systime_start, systime_end)) / 1000.0);
 
-    if (mem2_hi > 0x93400000)
-    {
-        mem2_hi = 0x93400000;
-    }
     rrc_loader_load(dol, &stored_settings, bi2, mem1_hi, mem2_hi, region);
 
     return 0;

@@ -27,11 +27,21 @@
 
 #define RRC_BI2_SIZE 0x2000
 #define RRC_PATCH_COPY_ADDRESS 0x80900000
-#define RRC_SIGNATURE_ADDRESS 0x93400100
+#define RRC_SIGNATURE_ADDRESS 0x817ffff8
 // Must be kept in sync with runtime-ext/base.ld's PROVIDE and pulsar
-#define RRC_RR_BITFLAGS 0x93400104
+#define RRC_RR_BITFLAGS 0x817ffff0
 // Must be kept in sync with the .riivo_disc_ptr section address in runtime-ext's linker script
 #define RRC_RIIVO_DISC_PTR 0x81782fa0
+// Must be kept in sync with the .dvd_trampolines section address in runtime-ext's linker script
+#define RRC_TRAMPOLINE_START 0x81782d60
+
+// The absolute highest address that the runtime-ext DOL may use.
+// We have an assert that makes sure we never copy past this.
+// We subtract 64 bytes to give some wiggle room for certain
+// fixed-address static data, for example at 0x817ffff0 we have the rrc_bitflags.
+#define RRC_RUNTIME_EXT_DOL_SAFE_END (0x817fffff - 64)
+
+#define RRC_RUNTIME_EXT_DOL_SAFE_START 0x81744260
 
 /*
     `out' should be a statically allocated string no less than 64 bytes long.

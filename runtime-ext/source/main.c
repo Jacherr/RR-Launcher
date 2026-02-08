@@ -28,6 +28,7 @@
 #include <dol.h>
 #include "util.h"
 #include "dvd.h"
+#include "trampoline.h"
 #include <errno.h>
 
 #define EXPORT_FUNCTION(secname, decl_args, call_args, implname) \
@@ -87,6 +88,7 @@ int _start()
     *(volatile u32 *)__custom_read_prio_impl;
     *(volatile u32 *)__custom_close_impl;
     *(volatile u32 *)((volatile struct sd_vtable *)&__sd_vtable)->open;
+    *(volatile u32 *)(_rrc_trampoline_scratch_space);
 
     // Get the compiler to remove all unnecessary libogc deinitialization code, this function is never actually called
     while (1)

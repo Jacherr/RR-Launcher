@@ -25,6 +25,7 @@ PHDRS {
 
 SECTIONS {
     # .init, .text and .rodata are specified in Makefile LDFLAGS
+    .dvd_trampolines              0x81782d60 : { *(.dvd_trampolines) }              :dvd
     .sd_vtable                    0x81782e00 : { *(.sd_vtable) }                    :dvd
     .dvd_convert_path_to_entrynum 0x81782e60 : { *(.dvd_convert_path_to_entrynum) } :dvd
     .dvd_open                     0x81782ea0 : { *(.dvd_open) }                     :dvd
@@ -33,7 +34,15 @@ SECTIONS {
     .dvd_close                    0x81782f60 : { *(.dvd_close) }                    :dvd
     .riivo_disc_ptr               0x81782fa0 : { *(.riivo_disc_ptr) }               :dvd
 
-    PROVIDE(rrc_bitflags = 0x93400104);
+    PROVIDE(dvd_convert_path_to_entrynum_trampoline = ADDR(.dvd_trampolines));
+    PROVIDE(dvd_fast_open_trampoline = ADDR(.dvd_trampolines) + 32);
+    PROVIDE(dvd_open_trampoline = ADDR(.dvd_trampolines) + 64);
+    PROVIDE(dvd_read_prio_trampoline = ADDR(.dvd_trampolines) + 96);
 
-    ASSERT(ADDR(.bss) + SIZEOF(.bss) <= 0x817FFFFF, "bss section overflows mem1")
+    PROVIDE(rrc_bitflags = 0x817ffff0);
+
+    # bss is placed at the very end, so we make sure the DOL never grows too big to overflow mem1.
+    # We also never write to the last 64 bytes of mem1 either, that's reserved for some other static data
+    # like the bitflags and signature
+    ASSERT(ADDR(.bss) + SIZEOF(.bss) <= (0x817FFFFF - 64), "bss section overflows mem1")
 }
