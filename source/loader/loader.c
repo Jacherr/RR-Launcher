@@ -204,6 +204,7 @@ void rrc_loader_load(struct rrc_dol *dol, struct rrc_settingsfile *settings, voi
 
     // Signature, used by Pulsar to tell that we've loaded via the new channel instead of Riivolution.
     *(u32 *)RRC_SIGNATURE_ADDRESS = 0xDEADBEEF;
+    *(u32 *)RRC_RUNTIME_EXT_ABI_VERSION_ADDRESS = RRC_RUNTIME_EXT_ABI_VERSION;
 
     u8 bitflags = 0;
     if (settings->separate_savegame)
