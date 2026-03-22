@@ -26,7 +26,7 @@
 #define RRC_LOADER_BACKJMP_H
 
 #include <gctypes.h>
-
+#include "ppc.h"
 #include "../result.h"
 
 enum rrc_dvd_region
@@ -83,35 +83,34 @@ const u32 rrc_dvdf_addrs[3][5] =
 const u32 rrc_dvdf_backjmp_instrs[3][5][4] = {
     [RRC_DVD_REGION_P] =
         {
-            [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = {0x3d208015, 0x6129df5c, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_FAST_OPEN] = {0x3d208015, 0x6129e264, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_OPEN] = {0x3d208015, 0x6129e2cc, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_READ_PRIO] = {0x3d208015, 0x6129e844, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_CLOSE] = {0x3d208015, 0x6129e578, 0x7d2903a6, 0x4e800420}},
+            [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = RRC_PPC_BRANCH(0x8015df5c),
+            [RRC_DVDF_FAST_OPEN] = RRC_PPC_BRANCH(0x8015e264),
+            [RRC_DVDF_OPEN] = RRC_PPC_BRANCH(0x8015e2cc),
+            [RRC_DVDF_READ_PRIO] = RRC_PPC_BRANCH(0x8015e844),
+            [RRC_DVDF_CLOSE] = RRC_PPC_BRANCH(0x8015e578)},
     [RRC_DVD_REGION_E] =
         {
-            [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = {0x3d208015, 0x6129debc, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_FAST_OPEN] = {0x3d208015, 0x6129e1c4, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_OPEN] = {0x3d208015, 0x6129e22c, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_READ_PRIO] = {0x3d208015, 0x6129e7a4, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_CLOSE] = {0x3d208015, 0x6129e4d8, 0x7d2903a6, 0x4e800420}},
+            [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = RRC_PPC_BRANCH(0x8015debc),
+            [RRC_DVDF_FAST_OPEN] = RRC_PPC_BRANCH(0x8015e1c4),
+            [RRC_DVDF_OPEN] = RRC_PPC_BRANCH(0x8015e22c),
+            [RRC_DVDF_READ_PRIO] = RRC_PPC_BRANCH(0x8015e7a4),
+            [RRC_DVDF_CLOSE] = RRC_PPC_BRANCH(0x8015e4d8)},
     [RRC_DVD_REGION_J] =
         {
-            [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = {0x3d208015, 0x6129de7c, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_FAST_OPEN] = {0x3d208015, 0x6129e184, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_OPEN] = {0x3d208015, 0x6129e1ec, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_READ_PRIO] = {0x3d208015, 0x6129e764, 0x7d2903a6, 0x4e800420},
-            [RRC_DVDF_CLOSE] = {0x3d208015, 0x6129e498, 0x7d2903a6, 0x4e800420}}};
+            [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = RRC_PPC_BRANCH(0x8015de7c),
+            [RRC_DVDF_FAST_OPEN] = RRC_PPC_BRANCH(0x8015e184),
+            [RRC_DVDF_OPEN] = RRC_PPC_BRANCH(0x8015e1ec),
+            [RRC_DVDF_READ_PRIO] = RRC_PPC_BRANCH(0x8015e764),
+            [RRC_DVDF_CLOSE] = RRC_PPC_BRANCH(0x8015e498)}};
 
-// We need to be able to jump to the custom functions. 
+// We need to be able to jump to the custom functions.
 // These jump to the approprate address for each custom function.
 const u32 rrc_dvdf_jmp_to_custom_instrs[5][4] = {
-    [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = {0x3d208178, 0x61292e60, 0x7d2903a6, 0x4e800420},
-    [RRC_DVDF_FAST_OPEN] = {0x3d208178, 0x61292ee0, 0x7d2903a6, 0x4e800420},
-    [RRC_DVDF_OPEN] = {0x3d208178, 0x61292ea0, 0x7d2903a6, 0x4e800420},
-    [RRC_DVDF_READ_PRIO] = {0x3d208178, 0x61292f20, 0x7d2903a6, 0x4e800420},
-    [RRC_DVDF_CLOSE] = {0x3d208178, 0x61292f60, 0x7d2903a6, 0x4e800420}
-};
+    [RRC_DVDF_CONVERT_PATH_TO_ENTRYNUM] = RRC_PPC_BRANCH(0x81782e60),
+    [RRC_DVDF_FAST_OPEN] = RRC_PPC_BRANCH(0x81782ee0),
+    [RRC_DVDF_OPEN] = RRC_PPC_BRANCH(0x81782ea0),
+    [RRC_DVDF_READ_PRIO] = RRC_PPC_BRANCH(0x81782f20),
+    [RRC_DVDF_CLOSE] = RRC_PPC_BRANCH(0x81782f60)};
 
 enum rrc_dvd_region rrc_region_char_to_region(char region)
 {

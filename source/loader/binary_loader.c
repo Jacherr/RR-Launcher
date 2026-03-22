@@ -20,6 +20,7 @@
 #include <dol.h>
 
 #include "../util.h"
+#include "loader.h"
 #include "binary_loader.h"
 
 bool rrc_binary_find_section_by_addr(struct rrc_dol *dol, u32 addr, void **virt_addr, u32 *section_index)
@@ -70,6 +71,23 @@ static void get_runtime_ext_path(char region, char *out)
     snprintf(out, 64, RRC_RUNTIME_EXT_BASE_PATH "-%c.dol", region);
 }
 
+/**
+ * Makes sure a section from the runtime-ext DOL can be safely loaded into memory
+ * by checking that it does not escape its reserved area.
+ */
+static void ensure_section_inbounds(u32 addr, u32 size)
+{
+    if (addr + size > RRC_RUNTIME_EXT_DOL_SAFE_END)
+    {
+        RRC_FATAL("section overflows MEM1: %x + %x > %x", addr, size, RRC_RUNTIME_EXT_DOL_SAFE_END);
+    }
+
+    if (addr < RRC_RUNTIME_EXT_DOL_SAFE_START)
+    {
+        RRC_FATAL("section underflows reserved runtime-ext area: %x < %x", addr, RRC_RUNTIME_EXT_DOL_SAFE_START);
+    }
+}
+
 void rrc_binary_load_runtime_ext(char region)
 {
     char runtime_ext_path[64];
@@ -95,6 +113,7 @@ void rrc_binary_load_runtime_ext(char region)
         rrc_result_error_check_error_fatal(res);
     }
 
+    ensure_section_inbounds(patch_dol.bss_addr, patch_dol.bss_size);
     memset((void *)patch_dol.bss_addr, 0, patch_dol.bss_size);
     rrc_invalidate_cache((void *)patch_dol.bss_addr, patch_dol.bss_size);
 
@@ -106,10 +125,7 @@ void rrc_binary_load_runtime_ext(char region)
         if (sec_addr == 0)
             continue;
 
-        if (sec_addr + sec_size > 0x817fffff)
-        {
-            RRC_FATAL("section %d overflows MEM1: %x + %x > 0x817fffff", i, sec_addr, sec_size);
-        }
+        ensure_section_inbounds(sec_addr, sec_size);
 
         if (fseek(patch_file, sec, SEEK_SET) != 0)
         {

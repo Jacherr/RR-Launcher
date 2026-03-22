@@ -147,7 +147,7 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
     // Just always enable the pack, there is no setting for this.
     TRY(rrc_patch_loader_append_patches_for_option(xml_top, options_index, "Pack", RRC_SETTINGSFILE_PACK_ENABLED_VALUE, active_patches, &active_patches_count));
 
-    // FIXME: Handle savegame options.
+    // NOTE: Separate Savegame is implemented manually rather than using the xml.
 
     // Iterate through <patch> elements.
     for (mxml_node_t *cur = mxmlFindElement(xml_top, xml_top, "patch", NULL, NULL, MXML_DESCEND_FIRST); cur != NULL; cur = mxmlGetNextSibling(cur))
@@ -194,24 +194,28 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
         }
         mxmlIndexDelete(file_repl_index);
 
-        mxml_index_t *folder_repl_index = mxmlIndexNew(cur, "folder", NULL);
-        for (mxml_node_t *folder = mxmlIndexEnum(folder_repl_index); folder != NULL; folder = mxmlIndexEnum(folder_repl_index))
+        // HACK: Folder remappings for My Stuff are implemented in the runtime-ext code directly since we can't handle <folder> without a `disc` yet,
+        // so skip <folder> elements for My Stuff here. Eventually it would be better to properly handle the XML for it.
+        bool is_my_stuff_option = strcmp(elem_id, "RRCTGPLoad") == 0 || strcmp(elem_id, "RRLoad") == 0 || strcmp(elem_id, "RRCTGPLoadMusic") == 0 || strcmp(elem_id, "RRLoadMusic") == 0;
+        if (!is_my_stuff_option)
         {
-            PARSE_REQUIRED_ATTR(folder, disc_path_mxml, "disc");
-            // FIXME: this can/is actually sometimes be omitted and doesn't need to be required,
-            // but this requires some special handling in the runtime-ext code to deal with
-            PARSE_REQUIRED_ATTR(folder, external_path_mxml, "external");
+            mxml_index_t *folder_repl_index = mxmlIndexNew(cur, "folder", NULL);
+            for (mxml_node_t *folder = mxmlIndexEnum(folder_repl_index); folder != NULL; folder = mxmlIndexEnum(folder_repl_index))
+            {
+                PARSE_REQUIRED_ATTR(folder, disc_path_mxml, "disc");
+                PARSE_REQUIRED_ATTR(folder, external_path_mxml, "external");
 
-            char *disc_path_m1 = bump_alloc_string(mem1, disc_path_mxml);
-            char *external_path_m1 = external_path_mxml ? bump_alloc_string(mem1, external_path_mxml) : NULL;
+                char *disc_path_m1 = bump_alloc_string(mem1, disc_path_mxml);
+                char *external_path_m1 = bump_alloc_string(mem1, external_path_mxml);
 
-            struct rrc_riivo_disc_replacement *patch_dist = &riivo_disc->replacements[riivo_disc->count];
-            patch_dist->disc = disc_path_m1;
-            patch_dist->external = external_path_m1;
-            patch_dist->type = RRC_RIIVO_FOLDER_REPLACEMENT;
-            riivo_disc->count++;
+                struct rrc_riivo_disc_replacement *patch_dist = &riivo_disc->replacements[riivo_disc->count];
+                patch_dist->disc = disc_path_m1;
+                patch_dist->external = external_path_m1;
+                patch_dist->type = RRC_RIIVO_FOLDER_REPLACEMENT;
+                riivo_disc->count++;
+            }
+            mxmlIndexDelete(folder_repl_index);
         }
-        mxmlIndexDelete(folder_repl_index);
 
         mxml_index_t *memory_index = mxmlIndexNew(cur, "memory", NULL);
         for (mxml_node_t *memory = mxmlIndexEnum(memory_index); memory != NULL; memory = mxmlIndexEnum(memory_index))

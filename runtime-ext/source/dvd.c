@@ -29,16 +29,15 @@
 #include <stdio.h>
 #include <rvl/cache.h>
 #include <riivo.h>
+#include <bitflags.h>
+#include "trampoline.h"
 
 /**
  * Contains all <file> and <folder> replacements. Initialized in the launcher DOL based on the XML.
  */
 __attribute__((section(".riivo_disc_ptr"))) static struct rrc_riivo_disc *riivo_disc = NULL;
 
-#define DVD_CONVERT_PATH_TO_ENTRYNUM_ADDR 0x93400000
-#define DVD_FAST_OPEN 0x93400020
-#define DVD_OPEN 0x93400040
-#define DVD_READ_PRIO 0x93400060
+extern u8 rrc_bitflags;
 
 /**
  * In order to tell whether an entrynum is a special-cased SD entrynum,
@@ -156,6 +155,65 @@ static struct rte_open_file *rte_dvd_alloc_open_file()
     RTE_FATAL("Attempted to open more than " RTE_STRINGIFY(MAX_CONCURRENT_FILES) " SD files at once!");
 }
 
+static bool starts_with(const char *str, const char *prefix)
+{
+    return strncmp(str, prefix, strlen(prefix)) == 0;
+}
+
+static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *entry_num)
+{
+    if ((rrc_bitflags & RRC_BITFLAGS_MY_STUFF_ANY) == 0)
+    {
+        // My Stuff not enabled.
+        return false;
+    }
+
+    // If My Stuff RR/CTGP music is enabled, the path must start with /sound/strm.
+    if (rrc_bitflags & RRC_BITFLAGS_MY_STUFF_ANY_MUSIC)
+    {
+        if (!starts_with(path, "/sound/strm"))
+        {
+            return false;
+        }
+    }
+
+    // Get the filename segment of the path: '/path/to/file.szs' -> 'file.szs'
+    const char *filename = strrchr(path, '/');
+    if (filename)
+    {
+        // Skip the slash itself.
+        filename++;
+    }
+    else
+    {
+        // There's no slash in the path, so the whole path is simply the filename itself.
+        filename = path;
+    }
+
+    // If My Stuff RR is enabled, look for '/RetroRewind6/MyStuff/file.szs'
+    // If My Stuff CTGP is enabled, look for '/ctgpr/My Stuff/file.szs'
+    char my_stuff_path[64];
+    if (rrc_bitflags & (RRC_BITFLAGS_MY_STUFF_RR | RRC_BITFLAGS_MY_STUFF_RR_MUSIC))
+    {
+        snprintf(my_stuff_path, sizeof(my_stuff_path), "/RetroRewind6/MyStuff/%s", filename);
+    }
+    else
+    {
+        snprintf(my_stuff_path, sizeof(my_stuff_path), "/ctgpr/My Stuff/%s", filename);
+    }
+
+    if (rrc_rt_sd_file_exists(my_stuff_path))
+    {
+        RTE_DBG("Found My Stuff replacement for %s (sd path='%s')\n", filename, my_stuff_path);
+        *entry_num = rte_dvd_path_to_entrynum(my_stuff_path);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 /**
  * Attempts to resolve a DVD path to an entrynum, based on the riivo file and folder replacements.
  * Returns true and writes the entrynum to `entry_num` if a replacement was found,
@@ -164,6 +222,12 @@ static struct rte_open_file *rte_dvd_alloc_open_file()
 static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_num)
 {
     rrc_rt_sd_init();
+
+    // Try My Stuff replacements first.
+    if (rte_dvd_resolve_my_stuff_path_to_entry_num(filename, entry_num))
+    {
+        return true;
+    }
 
     for (int i = riivo_disc->count - 1; i >= 0; i--)
     {
@@ -336,8 +400,7 @@ custom_convert_path_to_entry_num_impl(const char *filename)
     }
 
     // Return to original overwritten function
-    s32 (*cb)(const char *) = (void *)DVD_CONVERT_PATH_TO_ENTRYNUM_ADDR;
-    s32 res = cb(filename);
+    s32 res = dvd_convert_path_to_entrynum_trampoline(filename);
     if ((res & SPECIAL_ENTRYNUM_MASK) == SPECIAL_ENTRYNUM)
     {
         RTE_FATAL("DVD Convert path returned special entry (%d)", res);
@@ -362,8 +425,7 @@ custom_open_impl(const char *path, FileInfo *file_info)
         return 1;
     }
 
-    s32 (*cb)(const char *, FileInfo *) = (void *)DVD_OPEN;
-    s32 res = cb(path, file_info);
+    s32 res = dvd_open_trampoline(path, file_info);
     RTE_DBG("Default DVD Open (%d) address: %d\n", res, file_info->startAddr);
     return res;
 }
@@ -381,8 +443,7 @@ custom_fast_open_impl(s32 entry_num, FileInfo *file_info)
     }
 
     // Return to original overwritten function
-    s32 (*cb)(s32, FileInfo *) = (void *)DVD_FAST_OPEN;
-    s32 res = cb(entry_num, file_info);
+    s32 res = dvd_fast_open_trampoline(entry_num, file_info);
     if (res != -1 && (file_info->startAddr & SPECIAL_ENTRYNUM_MASK) == SPECIAL_ENTRYNUM)
     {
         RTE_FATAL("Normal FastOpen() returned special bitpattern (%d)", res);
@@ -427,8 +488,7 @@ custom_read_prio_impl(FileInfo *file_info, void *buffer, s32 length, s32 offset,
         return bytes;
     }
 
-    s32 (*cb)(FileInfo *, void *, s32, s32, s32) = (void *)DVD_READ_PRIO;
-    return cb(file_info, buffer, length, offset, prio);
+    return dvd_read_prio_trampoline(file_info, buffer, length, offset, prio);
 }
 
 __attribute__((noinline)) bool

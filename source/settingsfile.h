@@ -25,9 +25,14 @@
 
 #define RRC_SETTINGSFILE_DEFAULT 0                   /* disabled */
 #define RRC_SETTINGSFILE_MY_STUFF_DEFAULT 0          /* disabled */
-#define RRC_SETTINGSFILE_SEPARATE_SAVEGAME_DEFAULT 1 /* enabled */
+#define RRC_SETTINGSFILE_SEPARATE_SAVEGAME_DEFAULT 0 /* disabled */
 #define RRC_SETTINGSFILE_AUTOUPDATE_DEFAULT 1        /* enabled */
 #define RRC_SETTINGSFILE_PACK_ENABLED_VALUE 1        /* enabled */
+
+#define RRC_SETTINGSFILE_MY_STUFF_CTGP 1
+#define RRC_SETTINGSFILE_MY_STUFF_RR 2
+#define RRC_SETTINGSFILE_MY_STUFF_CTGP_MUSIC 3
+#define RRC_SETTINGSFILE_MY_STUFF_RR_MUSIC 4
 
 enum rrc_settingsfile_status
 {

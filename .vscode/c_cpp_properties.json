@@ -8,8 +8,7 @@
                 "/opt/devkitpro/libogc/include/**",
                 "/opt/devkitpro/portlibs/ppc/include",
                 "/opt/devkitpro/portlibs/wii/include",
-                "/opt/devkitpro/devkitPPC/powerpc-eabi/include",
-                "/opt/devkitpro/bslug/include"
+                "/opt/devkitpro/devkitPPC/powerpc-eabi/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

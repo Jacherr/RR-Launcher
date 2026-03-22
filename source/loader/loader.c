@@ -39,6 +39,8 @@
 #include "../exception.h"
 #include <riivo.h>
 #include "../util.h"
+#include "../settingsfile.h"
+#include <bitflags.h>
 
 /**
  * Patches the DVD functions in the game DOL to immediately jump to custom DVD functions implemented in runtime-ext.
@@ -100,7 +102,7 @@ static void patch_dvd_functions(struct rrc_dol *dol, char region)
 
         // 32 bytes (4 instructions for the backjmp + 4 overwritten instructions restored) per patched function.
         // This is the start of the trampoline.
-        u32 *hooked_addr = (u32 *)(0x93400000 + (i * 32));
+        u32 *hooked_addr = (u32 *)(RRC_TRAMPOLINE_START + (i * 32));
         RRC_ASSERT((u32)hooked_addr < RRC_SIGNATURE_ADDRESS, "Trampoline address overlaps with signature address");
 
         // Prepare the trampoline: copy the first 4 instructions of the original function that we're about to overwrite to the start,
@@ -202,10 +204,26 @@ void rrc_loader_load(struct rrc_dol *dol, struct rrc_settingsfile *settings, voi
 
     // Signature, used by Pulsar to tell that we've loaded via the new channel instead of Riivolution.
     *(u32 *)RRC_SIGNATURE_ADDRESS = 0xDEADBEEF;
+    *(u32 *)RRC_RUNTIME_EXT_ABI_VERSION_ADDRESS = RRC_RUNTIME_EXT_ABI_VERSION;
 
     u8 bitflags = 0;
     if (settings->separate_savegame)
         bitflags |= RRC_BITFLAGS_SAVEGAME;
+    switch (settings->my_stuff)
+    {
+    case RRC_SETTINGSFILE_MY_STUFF_CTGP:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_CTGP;
+        break;
+    case RRC_SETTINGSFILE_MY_STUFF_RR:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_RR;
+        break;
+    case RRC_SETTINGSFILE_MY_STUFF_CTGP_MUSIC:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_CTGP_MUSIC;
+        break;
+    case RRC_SETTINGSFILE_MY_STUFF_RR_MUSIC:
+        bitflags |= RRC_BITFLAGS_MY_STUFF_RR_MUSIC;
+        break;
+    }
 
     *(u8 *)RRC_RR_BITFLAGS = bitflags;
     rrc_invalidate_cache((void *)RRC_SIGNATURE_ADDRESS, 5);
