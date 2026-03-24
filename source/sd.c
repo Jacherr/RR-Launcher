@@ -21,6 +21,7 @@
 #include "unistd.h"
 
 #include "sd.h"
+#include <sys/dirent.h>
 
 struct rrc_result rrc_sd_init()
 {
@@ -43,4 +44,56 @@ struct rrc_result rrc_sd_init()
     unlink(RRC_SD_TEST_FILE);
 
     return rrc_result_success;
+}
+
+bool rrc_sd_file_exists(const char *path)
+{
+    FILE *file = fopen(path, "r");
+    if (file != NULL)
+    {
+        fclose(file);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool rrc_sd_folder_exists(const char *path)
+{
+    DIR *dir = opendir(path);
+    if (dir != NULL)
+    {
+        closedir(dir);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+int rrc_sd_get_folder_file_count(const char *path, struct rrc_result *out_err)
+{
+    DIR *dir = opendir(path);
+    if (dir == NULL)
+    {
+        *out_err = rrc_result_create_error_errno(errno, "Failed to open directory");
+        return -1;
+    }
+
+    int count = 0;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        // Skip . and ..
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+
+        count++;
+    }
+
+    closedir(dir);
+    return count;
 }

@@ -23,6 +23,9 @@
 #include "../settingsfile.h"
 #include "loader.h"
 #include "binary_loader.h"
+#include "../sd.h"
+#include <sys/dirent.h>
+#include "../time.h"
 
 static char *bump_alloc_string(u32 *arena, const char *src)
 {
@@ -32,6 +35,12 @@ static char *bump_alloc_string(u32 *arena, const char *src)
     memcpy(dest, src, src_len);
     dest[src_len] = '\0';
     return dest;
+}
+
+static const char **bump_alloc_string_array(u32 *arena, int count)
+{
+    *arena -= sizeof(char *) * count;
+    return (const char **)*arena;
 }
 
 static struct rrc_result rrc_patch_loader_append_patches_for_option(
@@ -103,6 +112,54 @@ static struct rrc_result rrc_patch_loader_append_patches_for_option(
     }
 
     return rrc_result_create_error_corrupted_rr_xml("option not found in xml");
+}
+
+// Only need to track immediate files in this folder.
+const char **rrc_riivo_patch_loader_get_entries_in_replaced_folder(u32 *arena, const char *folder_path, int *out_count)
+{
+    DIR *dir = opendir(folder_path);
+    if (!dir)
+    {
+        rrc_dbg_printf("Failed to open folder '%s' to read contents: %d\n", folder_path, errno);
+        *out_count = -1;
+        return NULL;
+    }
+
+    // Count entries first, so we only allocate space for the actual entries. Inefficient, but this is why we do it here and not in-game!
+    int count = 0;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || entry->d_type != DT_REG)
+            continue;
+
+        count++;
+    }
+
+    if (count >= MAX_FOLDER_FILES)
+    {
+        RRC_FATAL("Too many files in folder '%s' for Riivolution patch loader! Found %d files, but max is %d", folder_path, count + 1, MAX_FOLDER_FILES);
+    }
+
+    // Reset directory stream to read entries again for storing them.
+    rewinddir(dir);
+
+    const char **entries = bump_alloc_string_array(arena, sizeof(char *) * count);
+    int i = 0;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || entry->d_type != DT_REG)
+            continue;
+
+        char *entry_path = bump_alloc_string(arena, entry->d_name);
+        entries[i] = entry_path;
+        i++;
+    }
+
+    closedir(dir);
+
+    *out_count = count;
+    return entries;
 }
 
 struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings, u32 *mem1, u32 *mem2, struct parse_riivo_output *out)
@@ -183,6 +240,13 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
             PARSE_REQUIRED_ATTR(file, disc_path_mxml, "disc");
             PARSE_REQUIRED_ATTR(file, external_path_mxml, "external");
 
+            // Check that the external path exists.
+            if (!rrc_sd_file_exists(external_path_mxml))
+            {
+                // File doesn't exist; don't register it.
+                continue;
+            }
+
             char *disc_path_m1 = bump_alloc_string(mem1, disc_path_mxml);
             char *external_path_m1 = bump_alloc_string(mem1, external_path_mxml);
 
@@ -190,6 +254,8 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
             patch_dist->disc = disc_path_m1;
             patch_dist->external = external_path_m1;
             patch_dist->type = RRC_RIIVO_FILE_REPLACEMENT;
+            patch_dist->folder_contents = NULL;
+            patch_dist->folder_contents_count = 0;
             riivo_disc->count++;
         }
         mxmlIndexDelete(file_repl_index);
@@ -205,13 +271,33 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
                 PARSE_REQUIRED_ATTR(folder, disc_path_mxml, "disc");
                 PARSE_REQUIRED_ATTR(folder, external_path_mxml, "external");
 
+                rrc_dbg_printf("Processing folder replacement: disc='%s', external='%s'\n", disc_path_mxml, external_path_mxml);
+
+                if (!rrc_sd_folder_exists(external_path_mxml))
+                {
+                    // Folder doesn't exist; don't register it.
+                    continue;
+                }
+
                 char *disc_path_m1 = bump_alloc_string(mem1, disc_path_mxml);
                 char *external_path_m1 = bump_alloc_string(mem1, external_path_mxml);
+
+                int out_count = 0;
+                const char **folder_contents = rrc_riivo_patch_loader_get_entries_in_replaced_folder(mem1, external_path_mxml, &out_count);
+
+                if(out_count == 0)
+                {
+                    // The folder exists but is empty, which is a bit suspicious for a folder replacement. Don't register it since it won't actually replace anything.
+                    rrc_dbg_printf("WARNING: folder replacement '%s' is empty!\n", external_path_mxml);
+                    continue;
+                }
 
                 struct rrc_riivo_disc_replacement *patch_dist = &riivo_disc->replacements[riivo_disc->count];
                 patch_dist->disc = disc_path_m1;
                 patch_dist->external = external_path_m1;
                 patch_dist->type = RRC_RIIVO_FOLDER_REPLACEMENT;
+                patch_dist->folder_contents = folder_contents;
+                patch_dist->folder_contents_count = out_count;
                 riivo_disc->count++;
             }
             mxmlIndexDelete(folder_repl_index);

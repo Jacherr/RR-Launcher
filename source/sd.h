@@ -33,4 +33,18 @@
 */
 struct rrc_result rrc_sd_init();
 
+/*
+    Checks if a file exists on the SD card at the given path. The path should be absolute.
+*/
+bool rrc_sd_file_exists(const char *path);
+
+/**
+    Checks if a folder exists on the SD card at the given path. The path should be absolute.
+ */
+bool rrc_sd_folder_exists(const char *path);
+
+/**
+    Gets the number of files in a folder on the SD card at the given path. The path should be absolute.
+ */
+int rrc_sd_get_folder_file_count(const char *path, struct rrc_result *out_err);
 #endif

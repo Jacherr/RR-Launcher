@@ -48,7 +48,7 @@ extern u8 rrc_bitflags;
 #define SPECIAL_ENTRYNUM_MASK (0b1111111111 << 22)
 
 #define MAX_PATH_LEN 64
-#define ENTRYNUM_SLOTS 1000
+#define ENTRYNUM_SLOTS 2000
 #define MAX_CONCURRENT_FILES (16)
 
 struct rte_open_file
@@ -250,12 +250,10 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
 
             if (strcmp(disc_path, ffilename) == 0)
             {
-                if (rrc_rt_sd_file_exists(replacement->external))
-                {
-                    RTE_DBG("Found a file replacement! %d (%s)\n", i, disc_path);
-                    *entry_num = rte_dvd_path_to_entrynum(replacement->external);
-                    return true;
-                }
+                // We already checked that the external file exists when we registered the replacement.
+                RTE_DBG("Found a file replacement! %d (%s)\n", i, disc_path);
+                *entry_num = rte_dvd_path_to_entrynum(replacement->external);
+                return true;
             }
             break;
         }
@@ -273,13 +271,15 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
             }
 
             // Check if this folder path is a prefix of the given filename (`matches`),
-            // and if it is, find the "split" point at which they differ (`fi`). Example:
+            // and if it is, find the "split" point at which they differ (`differ_index`). Example:
             // Game requests "Assets/RaceAssets.szs", folder replacement is "/Assets" -> "/CustomAssets".
-            // This matches (despite a leading / in only one of the paths), and `fi` is the index of the `/`.
+            // This matches (despite a leading / in only one of the paths), and `differ_index` is the index of the `/`.
             // Everything after that index is append to the external path: "/CustomAssets" + "/RaceAssets.szs"
             // is resolved to "/CustomAssets/RaceAssets.szs".
+            // Note that the "disc" path ends at a folder so the disc path should always be shorter than the filename,
+            // which is a full, absolute path to the file. 
             bool matches = true;
-            int fi = 0;
+            int differ_index = 0;
             for (int di = 0; di < disc_len; di++)
             {
                 // NB: filename_len >= disc_len, so any `di` is also valid for `filename`
@@ -288,15 +288,15 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
                     // No explicit / in the requested filename. Allow this.
                     continue;
                 }
-                if (disc_path[di] != filename[fi])
+                if (disc_path[di] != filename[differ_index])
                 {
                     matches = false;
                     break;
                 }
-                fi++;
+                differ_index++;
             }
 
-            RTE_DBG("Found folder rename: '%s' == '%s' -> %d %d\n", disc_path, filename, matches, fi);
+            RTE_DBG("Found folder rename: '%s' == '%s' -> %d %d\n", disc_path, filename, matches, differ_index);
 
             if (matches)
             {
@@ -310,17 +310,40 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
                 strncpy(new_path, external_path, sizeof(new_path));
 
                 path_ptr += external_len;
-                if (filename[fi] != '/' && external_path[external_len - 1] != '/')
+                if (filename[differ_index] != '/' && external_path[external_len - 1] != '/')
                 {
                     // Add a / if there isn't already one that would separate the two paths.
                     *path_ptr = '/';
                     path_ptr++;
                 }
-                strncpy(path_ptr, filename + fi, 64 - ((u32)path_ptr - (u32)new_path));
+                strncpy(path_ptr, filename + differ_index, 64 - ((u32)path_ptr - (u32)new_path));
 
-                if (rrc_rt_sd_file_exists(new_path))
+                OS_Report("Checking for folder replacement path '%s' (external_path='%s', filename='%s', disc_path='%s')\n", new_path, external_path, filename, disc_path);
+                // Let's extract the filename from the path and see if exists in replacement->folder_contents.
+                char *new_path_filename = strrchr(new_path, '/');
+                if (new_path_filename)
                 {
-                    RTE_DBG("Found a folder replacement! %d (%s %s %s %s)\n", i, disc_path, external_path, filename, new_path);
+                    new_path_filename++;
+                }
+                else 
+                {
+                    new_path_filename = new_path;
+                }
+
+                bool cached_file_exists = false;
+                for(int i = 0; i < replacement->folder_contents_count; i++)
+                {
+                    if (strcmp(replacement->folder_contents[i], new_path_filename) == 0)
+                    {
+                        RTE_DBG("Found a cached match for the filename in the folder contents!\n");
+                        cached_file_exists = true;
+                        break;
+                    }
+                }
+
+                if (cached_file_exists)
+                {
+                    OS_Report("Found a folder replacement! %d (%s %s %s %s) (cached=%s)\n", i, disc_path, external_path, filename, new_path, cached_file_exists ? "true" : "false");
                     *entry_num = rte_dvd_path_to_entrynum(new_path);
                     return true;
                 }

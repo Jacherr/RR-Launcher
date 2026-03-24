@@ -28,6 +28,8 @@
 #define MAX_FILE_PATCHES 1000
 #define MAX_MEMORY_PATCHES 128
 #define MAX_ENABLED_SETTINGS (64)
+// We only make the array as big as needed. Almost all folders will be well under this.
+#define MAX_FOLDER_FILES 500
 
 struct parse_riivo_output
 {
