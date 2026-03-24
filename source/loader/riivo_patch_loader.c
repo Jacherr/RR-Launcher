@@ -171,6 +171,8 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
         return rrc_result_create_error_corrupted_rr_xml("missing " attr " attribute on " #node " replacement"); \
     }
 
+    int total_cached_folder_files = 0;
+
     out->loader_pul_dest = NULL;
 
     u32 mem1_orig = *mem1;
@@ -260,11 +262,28 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
         }
         mxmlIndexDelete(file_repl_index);
 
-        // HACK: Folder remappings for My Stuff are implemented in the runtime-ext code directly since we can't handle <folder> without a `disc` yet,
-        // so skip <folder> elements for My Stuff here. Eventually it would be better to properly handle the XML for it.
-        bool is_my_stuff_option = strcmp(elem_id, "RRCTGPLoad") == 0 || strcmp(elem_id, "RRLoad") == 0 || strcmp(elem_id, "RRCTGPLoadMusic") == 0 || strcmp(elem_id, "RRLoadMusic") == 0;
-        if (!is_my_stuff_option)
+        // Handle My Stuff separately since they may not have a `disc` attribute.
+        // All current My Stuff music options *do* have this attribute, so it's fine for them to use this (for now, anyway...).
+        // When all is said and done, we MUST be left with only one folder replacement marked as My Stuff, if My Stuff is enabled.
+        // If there are multiple, they will conflict.
+        bool is_rr_mystuff = strcmp(elem_id, "RRLoad") == 0;
+        bool is_ctgpr_mystuff = strcmp(elem_id, "RRCTGPLoad") == 0;
+        bool is_full_my_stuff_option = is_rr_mystuff || is_ctgpr_mystuff;
+
+        if (!is_full_my_stuff_option)
         {
+            // Skip music if the My Stuff option for it is disabled.
+            bool is_rr_music = strcmp(elem_id, "RRLoadMusic") == 0;
+            bool is_ctgp_music = strcmp(elem_id, "RRCTGPLoadMusic") == 0;
+
+            if ((is_rr_music && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_RR) || (is_ctgp_music && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_CTGP))
+            {
+                // This is a music patch, but the selected My Stuff option is not the one with the music patches, so skip it.
+                // If the full My Stuff option is enabled, then the music patches are included in that.
+                rrc_dbg_printf("My Stuff music patch '%s' skipped since the selected My Stuff option is not music patch exclusive.\n", elem_id);
+                continue;
+            }
+
             mxml_index_t *folder_repl_index = mxmlIndexNew(cur, "folder", NULL);
             for (mxml_node_t *folder = mxmlIndexEnum(folder_repl_index); folder != NULL; folder = mxmlIndexEnum(folder_repl_index))
             {
@@ -285,7 +304,13 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
                 int out_count = 0;
                 const char **folder_contents = rrc_riivo_patch_loader_get_entries_in_replaced_folder(mem1, external_path_mxml, &out_count);
 
-                if(out_count == 0)
+                total_cached_folder_files += out_count;
+                if (total_cached_folder_files >= GLOBAL_MAX_FOLDER_FILES)
+                {
+                    RRC_FATAL("Too many total files cached across all folder replacements for Riivolution patch loader! Found %d files, but max is %d", total_cached_folder_files, GLOBAL_MAX_FOLDER_FILES);
+                }
+
+                if (out_count == 0)
                 {
                     // The folder exists but is empty, which is a bit suspicious for a folder replacement. Don't register it since it won't actually replace anything.
                     rrc_dbg_printf("WARNING: folder replacement '%s' is empty!\n", external_path_mxml);
@@ -295,12 +320,63 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
                 struct rrc_riivo_disc_replacement *patch_dist = &riivo_disc->replacements[riivo_disc->count];
                 patch_dist->disc = disc_path_m1;
                 patch_dist->external = external_path_m1;
-                patch_dist->type = RRC_RIIVO_FOLDER_REPLACEMENT;
+                // We must set the correct type here since My Stuff should take priority.
+                patch_dist->type = (is_rr_music || is_ctgp_music) ? RRC_RIIVO_MY_STUFF_REPLACEMENT : RRC_RIIVO_FOLDER_REPLACEMENT;
                 patch_dist->folder_contents = folder_contents;
                 patch_dist->folder_contents_count = out_count;
                 riivo_disc->count++;
             }
             mxmlIndexDelete(folder_repl_index);
+        }
+        else if ((is_rr_mystuff && settings->my_stuff == RRC_SETTINGSFILE_MY_STUFF_RR) || (is_ctgpr_mystuff && settings->my_stuff == RRC_SETTINGSFILE_MY_STUFF_CTGP))
+        {
+            // Let's get the first entry in this patch just so we can get the external path,
+            // instead of hardcoding it.
+            mxml_index_t *folder_repl_index = mxmlIndexNew(cur, "folder", NULL);
+            mxml_node_t *folder = mxmlIndexEnum(folder_repl_index);
+            PARSE_REQUIRED_ATTR(folder, external_path_mxml, "external");
+
+            // Skip the folder replacement if we're currently looking at the wrong patch.
+            if ((is_rr_mystuff && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_RR) || (is_ctgpr_mystuff && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_CTGP))
+            {
+                continue;
+            }
+
+            if (!rrc_sd_folder_exists(external_path_mxml))
+            {
+                // Folder doesn't exist; don't register it.
+                continue;
+            }
+
+            char *external_path_m1 = bump_alloc_string(mem1, external_path_mxml);
+
+            int out_count = 0;
+            const char **folder_contents = rrc_riivo_patch_loader_get_entries_in_replaced_folder(mem1, external_path_mxml, &out_count);
+
+            total_cached_folder_files += out_count;
+            if (total_cached_folder_files >= GLOBAL_MAX_FOLDER_FILES)
+            {
+                RRC_FATAL("Too many total files cached across all folder replacements for Riivolution patch loader! Found %d files, but max is %d", total_cached_folder_files, GLOBAL_MAX_FOLDER_FILES);
+            }
+
+            if (out_count == 0)
+            {
+                // The folder exists but is empty, which is a bit suspicious for a folder replacement. Don't register it since it won't actually replace anything.
+                rrc_dbg_printf("WARNING: folder replacement '%s' is empty!\n", external_path_mxml);
+                continue;
+            }
+
+            struct rrc_riivo_disc_replacement *patch_dist = &riivo_disc->replacements[riivo_disc->count];
+            patch_dist->disc = NULL;
+            patch_dist->external = external_path_m1;
+            patch_dist->type = RRC_RIIVO_MY_STUFF_REPLACEMENT;
+            patch_dist->folder_contents = folder_contents;
+            patch_dist->folder_contents_count = out_count;
+            riivo_disc->count++;
+        }
+        else
+        {
+            rrc_dbg_printf("My Stuff is disabled, skipping folder replacements.\n");
         }
 
         mxml_index_t *memory_index = mxmlIndexNew(cur, "memory", NULL);

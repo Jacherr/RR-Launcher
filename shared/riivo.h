@@ -28,6 +28,8 @@ enum rrc_riivo_disc_replacement_type
 {
     RRC_RIIVO_FILE_REPLACEMENT,
     RRC_RIIVO_FOLDER_REPLACEMENT,
+    /// It's technically a folder replacement, but in order to save space we just use this enum.
+    RRC_RIIVO_MY_STUFF_REPLACEMENT,
 };
 
 struct rrc_riivo_disc_replacement
