@@ -182,8 +182,18 @@ static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *en
 
     // Find the My Stuff replacement.
     // Work backwards since it's likely it's near the end of the list.
-    struct rrc_riivo_disc_replacement *my_stuff_replacement = my_stuff_replacement_idx != -1 ? &riivo_disc->replacements[my_stuff_replacement_idx] : NULL;
-    if (my_stuff_replacement == NULL)
+    struct rrc_riivo_disc_replacement *my_stuff_replacement = NULL;
+
+    if(my_stuff_replacement_idx >= 0)
+    {
+        my_stuff_replacement = &riivo_disc->replacements[my_stuff_replacement_idx];
+        if (my_stuff_replacement->type != RRC_RIIVO_MY_STUFF_REPLACEMENT)
+        {
+            RTE_FATAL("Expected My Stuff replacement at index %d, but type was %d", my_stuff_replacement_idx, my_stuff_replacement->type);
+        }
+    }
+
+    if (my_stuff_replacement == NULL && my_stuff_replacement_idx != -2)
     {
         for (int i = riivo_disc->count - 1; i >= 0; i--)
         {
@@ -198,6 +208,7 @@ static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *en
 
     if (my_stuff_replacement == NULL)
     {
+        my_stuff_replacement_idx = -2;
         RTE_DBG("My Stuff replacement entry not found in the list of replacements! This can happen if the requested folder does not exist. Skipping.\n");
         return false;
     }
@@ -239,7 +250,7 @@ static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *en
 
     if (cached_file_exists)
     {
-        OS_Report("Found My Stuff replacement for %s (sd path='%s')\n", filename, my_stuff_path);
+        RTE_DBG("Found My Stuff replacement for %s (sd path='%s')\n", filename, my_stuff_path);
         *entry_num = rte_dvd_path_to_entrynum(my_stuff_path);
         return true;
     }
