@@ -252,6 +252,8 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
             char *disc_path_m1 = bump_alloc_string(mem1, disc_path_mxml);
             char *external_path_m1 = bump_alloc_string(mem1, external_path_mxml);
 
+            rrc_dbg_printf("File: disc='%s', external='%s'\n", disc_path_mxml, external_path_mxml);
+
             struct rrc_riivo_disc_replacement *patch_dist = &riivo_disc->replacements[riivo_disc->count];
             patch_dist->disc = disc_path_m1;
             patch_dist->external = external_path_m1;
