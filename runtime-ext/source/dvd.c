@@ -282,6 +282,8 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
         {
         case RRC_RIIVO_FILE_REPLACEMENT:
         {
+            RTE_DBG("Checking file replacement: '%s' == '%s'\n", replacement->disc, filename);
+            
             // Trim leading slashes from either path.
             const char *disc_path = replacement->disc;
             if (*disc_path == '/')
@@ -364,7 +366,7 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
                 }
                 strncpy(path_ptr, filename + differ_index, 64 - ((u32)path_ptr - (u32)new_path));
 
-                OS_Report("Checking for folder replacement path '%s' (external_path='%s', filename='%s', disc_path='%s')\n", new_path, external_path, filename, disc_path);
+                RTE_DBG("Checking for folder replacement path '%s' (external_path='%s', filename='%s', disc_path='%s')\n", new_path, external_path, filename, disc_path);
                 // Let's extract the filename from the path and see if exists in replacement->folder_contents.
                 char *new_path_filename = strrchr(new_path, '/');
                 if (new_path_filename)
@@ -493,7 +495,7 @@ custom_open_impl(const char *path, FileInfo *file_info)
     if (rte_dvd_resolve_path_to_entry_num(path, &entry_num))
     {
         rte_dvd_open_entry_num(entry_num, file_info);
-        OS_Report("Found entrynum replacement: %d (addr %d)\n", entry_num, file_info->startAddr);
+        RTE_DBG("Found entrynum replacement: %d (addr %d)\n", entry_num, file_info->startAddr);
         return 1;
     }
 

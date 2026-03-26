@@ -144,7 +144,7 @@ const char **rrc_riivo_patch_loader_get_entries_in_replaced_folder(u32 *arena, c
     // Reset directory stream to read entries again for storing them.
     rewinddir(dir);
 
-    const char **entries = bump_alloc_string_array(arena, sizeof(char *) * count);
+    const char **entries = bump_alloc_string_array(arena, count);
     int i = 0;
     while ((entry = readdir(dir)) != NULL)
     {
