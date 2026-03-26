@@ -92,10 +92,6 @@ int main(int argc, char **argv)
     {
         closedir(dir);
     }
-    else if (errno == ENOENT)
-    {
-        mkdir("sd:/RetroRewindChannel", 0);
-    }
     else
     {
         // ???
@@ -132,7 +128,7 @@ int main(int argc, char **argv)
         FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "w");
         if (afd == NULL)
         {
-            struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to create acceptance file. The SD card may be locked.");
+            struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to create acceptance file. The SD card may be write locked.");
             rrc_result_error_check_error_normal(err, xfb);
         }
         else

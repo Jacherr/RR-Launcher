@@ -22,6 +22,7 @@
 
 #include "sd.h"
 #include <sys/dirent.h>
+#include "update/update.h"
 
 struct rrc_result rrc_sd_init()
 {
@@ -35,11 +36,28 @@ struct rrc_result rrc_sd_init()
         return rrc_result_create_error_errno(errno, "Failed to set SD card root");
     }
 
-    FILE *file = fopen(RRC_SD_TEST_FILE, "w");
+    FILE *file = fopen(RRC_SD_TEST_FILE, "w+");
     if (!file)
     {
-        return rrc_result_create_error_errno(errno, "The SD card is not writeable. Make sure it is unlocked.");
+        return rrc_result_create_error_errno(errno, "The SD card is locked.");
     }
+
+    // Test writing to the SD card, then clean up the test file.
+    int res = fprintf(file, "Test");
+    fflush(file);
+
+    if (res <= 0) {
+        fclose(file);
+        return rrc_result_create_error_errno(errno, "The SD card is locked.");
+    }
+    fclose(file);
+
+    file = fopen(RRC_VERSIONFILE, "r");
+    if (file == NULL)
+    {
+        return rrc_result_create_error_errno(errno, "Failed to open version file.\nThis can happen if the SD card is locked,\nor your Retro Rewind installation is corrupted.");
+    }
+
     fclose(file);
     unlink(RRC_SD_TEST_FILE);
 
