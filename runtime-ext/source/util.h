@@ -49,4 +49,6 @@ void OS_Fatal(u32 *, u32 *, const char *);
 u32 align_down(u32 num, u32 align_as);
 u32 align_up(u32 num, u32 align_as);
 
+void to_lowercase(char *str);
+
 #endif
