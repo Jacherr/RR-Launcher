@@ -230,11 +230,11 @@ int main(int argc, char **argv)
         rrc_result_error_check_error_normal(update_res, xfb);
     }
 
-#define INTERRUPT_TIME 3000000 /* 3 seconds */
+#define INTERRUPT_TIME 5000000 /* 5 seconds */
     rrc_con_clear(true);
 
     rrc_con_print_text_centered(_RRC_ACTION_ROW, "Press A to launch, or press B to load settings.");
-    rrc_con_print_text_centered(_RRC_ACTION_ROW + 1, "Auto-launching in 3 seconds...");
+    rrc_con_print_text_centered(_RRC_ACTION_ROW + 1, "Auto-launching in 5 seconds...");
 
     for (int i = 0; i < INTERRUPT_TIME / RRC_WPAD_LOOP_TIMEOUT; i++)
     {
