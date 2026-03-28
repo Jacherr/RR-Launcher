@@ -104,25 +104,34 @@ int main(int argc, char **argv)
     RRC_ASSERTEQ(res, 1, "PAD_Init");
     res = WPAD_Init();
     RRC_ASSERTEQ(res, WPAD_ERR_NONE, "WPAD_Init");
+    bool first_open = false;
 
     FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "r");
     if (afd == NULL)
     {
         char *lines[] = {
-            "- - - WARNING - - -",
-            "This channel is still experimental and may have bugs.",
+            "Welcome to the new (beta) Retro Rewind Channel!",
             "",
-            "By continuing, you accept that there is NO WARRANTY",
-            "associated with this software, express or implied.",
+            "You will now be taken to the settings menu.",
+            "Please make sure your settings are the same",
+            "as what you used with the old channel.",
             "",
-            "This includes crashes, false-positive online bans,",
-            "incorrect or corrupted assets, corruption of installation,",
-            "loss of data, or potential system inoperability."};
+            "",
+            "By continuing, you acknowledge that:",
+            "1. The channel is in a beta and therefore unfinished state,",
+            "2. The channel comes with NO WARRANTY, express or implied,",
+            "3. Taking a backup of your SD card is recommended."
+        };
 
-        enum rrc_prompt_result result = rrc_prompt_2_options(xfb, lines, 9, "I Accept", "Close Launcher", RRC_PROMPT_RESULT_OK, RRC_PROMPT_RESULT_CANCEL);
+        enum rrc_prompt_result result = rrc_prompt_2_options(xfb, lines, 11, "I Accept", "Close Launcher", RRC_PROMPT_RESULT_OK, RRC_PROMPT_RESULT_CANCEL);
         if (result == RRC_PROMPT_RESULT_CANCEL)
         {
             exit(0);
+        }
+
+        if(result == RRC_PROMPT_RESULT_ERROR) {
+            struct rrc_result err = rrc_result_create_error_errno(EIO, "Failed to display prompt");
+            rrc_result_error_check_error_normal(err, xfb);
         }
 
         FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "w");
@@ -135,6 +144,8 @@ int main(int argc, char **argv)
         {
             fclose(afd);
         }
+
+        first_open = true;
     }
     else
     {
@@ -233,8 +244,10 @@ int main(int argc, char **argv)
 #define INTERRUPT_TIME 5000000 /* 5 seconds */
     rrc_con_clear(true);
 
-    rrc_con_print_text_centered(_RRC_ACTION_ROW, "Press A to launch, or press B to load settings.");
-    rrc_con_print_text_centered(_RRC_ACTION_ROW + 1, "Auto-launching in 5 seconds...");
+    if(!first_open) {
+        rrc_con_print_text_centered(_RRC_ACTION_ROW, "Press A to launch, or press B to load settings.");
+        rrc_con_print_text_centered(_RRC_ACTION_ROW + 1, "Auto-launching in 5 seconds...");
+    }
 
     for (int i = 0; i < INTERRUPT_TIME / RRC_WPAD_LOOP_TIMEOUT; i++)
     {
@@ -250,7 +263,7 @@ int main(int argc, char **argv)
         {
             break;
         }
-        else if (rrc_pad_b_pressed(pad))
+        else if (rrc_pad_b_pressed(pad) || first_open)
         {
             struct rrc_result r;
             int out = rrc_settings_display(xfb, &stored_settings, &r);
