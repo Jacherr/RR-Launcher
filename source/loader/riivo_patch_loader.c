@@ -43,6 +43,23 @@ static const char **bump_alloc_string_array(u32 *arena, int count)
     return (const char **)*arena;
 }
 
+bool should_register_patch_mystuff_aware(bool is_rr_mystuff, bool is_ctgpr_mystuff, bool is_rr_music_mystuff, bool is_ctgp_music_mystuff, int my_stuff_setting)
+{
+    if(!is_rr_mystuff && !is_ctgpr_mystuff && !is_rr_music_mystuff && !is_ctgp_music_mystuff)
+        return true;
+
+    if (is_rr_mystuff && my_stuff_setting == RRC_SETTINGSFILE_MY_STUFF_RR)
+        return true;
+    if (is_ctgpr_mystuff && my_stuff_setting == RRC_SETTINGSFILE_MY_STUFF_CTGP)
+        return true;
+    if (is_rr_music_mystuff && my_stuff_setting == RRC_SETTINGSFILE_MY_STUFF_RR_MUSIC)
+        return true;
+    if (is_ctgp_music_mystuff && my_stuff_setting == RRC_SETTINGSFILE_MY_STUFF_CTGP_MUSIC)
+        return true;
+
+    return false;
+}
+
 static struct rrc_result rrc_patch_loader_append_patches_for_option(
     mxml_node_t *top,
     mxml_index_t *index,
@@ -236,6 +253,17 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
         if (!enabled)
             continue;
 
+        // Handle My Stuff separately since they may not have a `disc` attribute.
+        // All current My Stuff music options *do* have this attribute, so it's fine for them to use this (for now, anyway...).
+        // When all is said and done, we MUST be left with only one folder replacement marked as My Stuff, if My Stuff is enabled.
+        // If there are multiple, they will conflict.
+        bool is_rr_mystuff = strcmp(elem_id, "RRLoad") == 0;
+        bool is_ctgpr_mystuff = strcmp(elem_id, "RRCTGPLoad") == 0;
+
+        // Skip music if the My Stuff exclusive option for it is disabled.
+        bool is_rr_music = strcmp(elem_id, "RRLoadMusic") == 0;
+        bool is_ctgp_music = strcmp(elem_id, "RRCTGPLoadMusic") == 0;
+
         mxml_index_t *file_repl_index = mxmlIndexNew(cur, "file", NULL);
         for (mxml_node_t *file = mxmlIndexEnum(file_repl_index); file != NULL; file = mxmlIndexEnum(file_repl_index))
         {
@@ -264,31 +292,8 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
         }
         mxmlIndexDelete(file_repl_index);
 
-        // Handle My Stuff separately since they may not have a `disc` attribute.
-        // All current My Stuff music options *do* have this attribute, so it's fine for them to use this (for now, anyway...).
-        // When all is said and done, we MUST be left with only one folder replacement marked as My Stuff, if My Stuff is enabled.
-        // If there are multiple, they will conflict.
-        bool is_rr_mystuff = strcmp(elem_id, "RRLoad") == 0;
-        bool is_ctgpr_mystuff = strcmp(elem_id, "RRCTGPLoad") == 0;
-        bool is_full_my_stuff_option = is_rr_mystuff || is_ctgpr_mystuff;
-
-        if (!is_full_my_stuff_option)
-        {
-            // Skip music if the My Stuff exclusive option for it is disabled.
-            bool is_rr_music = strcmp(elem_id, "RRLoadMusic") == 0;
-            bool is_ctgp_music = strcmp(elem_id, "RRCTGPLoadMusic") == 0;
-
-            // Essentially: checking if we're parsing music patches, and a music-patch-exclusive My Stuff option is enabled.
-            if (
-                (is_rr_music && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_RR_MUSIC) 
-                || (is_ctgp_music && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_CTGP_MUSIC))
-            {
-                // This is a music patch, but the selected My Stuff option is not music patch exclusive (or none at all), so skip it.
-                // If the full My Stuff option is enabled, then the music patches are included in the parsing of that, below.
-                rrc_dbg_printf("My Stuff music patch '%s' skipped since the selected My Stuff option is not music patch exclusive.\n", elem_id);
-                continue;
-            }
-
+        if (!is_rr_mystuff && !is_ctgpr_mystuff)
+        {    
             mxml_index_t *folder_repl_index = mxmlIndexNew(cur, "folder", NULL);
             for (mxml_node_t *folder = mxmlIndexEnum(folder_repl_index); folder != NULL; folder = mxmlIndexEnum(folder_repl_index))
             {
