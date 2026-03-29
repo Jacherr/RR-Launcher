@@ -274,16 +274,16 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
 
         if (!is_full_my_stuff_option)
         {
-            // Skip music if the My Stuff option for it is disabled.
+            // Skip music if the My Stuff exclusive option for it is disabled.
             bool is_rr_music = strcmp(elem_id, "RRLoadMusic") == 0;
             bool is_ctgp_music = strcmp(elem_id, "RRCTGPLoadMusic") == 0;
 
-            // Essentially: checking if we're parsing music patches, but a full My Stuff option is enabled.
+            // Essentially: checking if we're parsing music patches, and a music-patch-exclusive My Stuff option is enabled.
             if (
-                (is_rr_music && settings->my_stuff == RRC_SETTINGSFILE_MY_STUFF_RR) 
-                || (is_ctgp_music && settings->my_stuff == RRC_SETTINGSFILE_MY_STUFF_CTGP))
+                (is_rr_music && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_RR_MUSIC) 
+                || (is_ctgp_music && settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_CTGP_MUSIC))
             {
-                // This is a music patch, but the selected My Stuff option is not music patch exclusive, so skip it.
+                // This is a music patch, but the selected My Stuff option is not music patch exclusive (or none at all), so skip it.
                 // If the full My Stuff option is enabled, then the music patches are included in the parsing of that, below.
                 rrc_dbg_printf("My Stuff music patch '%s' skipped since the selected My Stuff option is not music patch exclusive.\n", elem_id);
                 continue;
