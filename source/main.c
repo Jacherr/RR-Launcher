@@ -30,6 +30,7 @@
 #include <sys/statvfs.h>
 #include <errno.h>
 #include <dirent.h>
+#include <bitflags.h>
 
 #include "loader/disc_loader.h"
 #include "shutdown.h"
@@ -51,6 +52,7 @@
 #include "exception.h"
 #include "sd.h"
 #include "pad.h"
+#include "crash.h"
 
 /* 100ms */
 #define DISKCHECK_DELAY 100000
@@ -104,6 +106,14 @@ int main(int argc, char **argv)
     RRC_ASSERTEQ(res, 1, "PAD_Init");
     res = WPAD_Init();
     RRC_ASSERTEQ(res, WPAD_ERR_NONE, "WPAD_Init");
+
+    // Check for the signature as well - the contents of memory are undefined at this point, but if the signature is written
+    // it's much more likely to be in a "known good" state.
+    if(*((u8*)RRC_RR_BITFLAGS) & RRC_BITFLAGS_RR_CRASHED && rrc_signature_written())
+    {
+        rrc_crash_handle(xfb);
+    }
+
     bool first_open = false;
 
     FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "r");
@@ -230,8 +240,8 @@ int main(int argc, char **argv)
         // it is initialized with defaults and we can continue with that.
     }
 
-    // Check for updates if the user enabled that setting.
-    if (stored_settings.auto_update)
+    // Check for updates if the user enabled that setting. Skip if we loaded from the game since this will have already ran.
+    if (stored_settings.auto_update && ((*((u8*)RRC_RR_BITFLAGS) & RRC_BITFLAGS_LOADED_FROM_RR) == 0 && rrc_signature_written()))
     {
 
         int update_count;
@@ -262,7 +272,8 @@ int main(int argc, char **argv)
         {
             break;
         }
-        else if (rrc_pad_b_pressed(pad) || first_open)
+        // Don't bother with auto launch if we're loading here back from the game
+        else if (rrc_pad_b_pressed(pad) || first_open || ((*((u8*)RRC_RR_BITFLAGS) & RRC_BITFLAGS_LOADED_FROM_RR) && rrc_signature_written()))
         {
             struct rrc_result r;
             int out = rrc_settings_display(xfb, &stored_settings, &r);
