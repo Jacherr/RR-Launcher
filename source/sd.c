@@ -21,6 +21,8 @@
 #include "unistd.h"
 
 #include "sd.h"
+#include <sys/dirent.h>
+#include "update/update.h"
 
 struct rrc_result rrc_sd_init()
 {
@@ -34,13 +36,82 @@ struct rrc_result rrc_sd_init()
         return rrc_result_create_error_errno(errno, "Failed to set SD card root");
     }
 
-    FILE *file = fopen(RRC_SD_TEST_FILE, "w");
+    FILE *file = fopen(RRC_SD_TEST_FILE, "w+");
     if (!file)
     {
-        return rrc_result_create_error_errno(errno, "The SD card is not writeable. Make sure it is unlocked.");
+        return rrc_result_create_error_errno(errno, "The SD card is locked.");
     }
+
+    // Test writing to the SD card, then clean up the test file.
+    int res = fprintf(file, "Test");
+    fflush(file);
+
+    if (res <= 0) {
+        fclose(file);
+        return rrc_result_create_error_errno(errno, "The SD card is locked.");
+    }
+    fclose(file);
+
+    file = fopen(RRC_VERSIONFILE, "r");
+    if (file == NULL)
+    {
+        return rrc_result_create_error_errno(errno, "Failed to open version file.\nThis can happen if the SD card is locked,\nor your Retro Rewind installation is corrupted.");
+    }
+
     fclose(file);
     unlink(RRC_SD_TEST_FILE);
 
     return rrc_result_success;
+}
+
+bool rrc_sd_file_exists(const char *path)
+{
+    FILE *file = fopen(path, "r");
+    if (file != NULL)
+    {
+        fclose(file);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool rrc_sd_folder_exists(const char *path)
+{
+    DIR *dir = opendir(path);
+    if (dir != NULL)
+    {
+        closedir(dir);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+int rrc_sd_get_folder_file_count(const char *path, struct rrc_result *out_err)
+{
+    DIR *dir = opendir(path);
+    if (dir == NULL)
+    {
+        *out_err = rrc_result_create_error_errno(errno, "Failed to open directory");
+        return -1;
+    }
+
+    int count = 0;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        // Skip . and ..
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+
+        count++;
+    }
+
+    closedir(dir);
+    return count;
 }

@@ -103,7 +103,7 @@ check_cover_register:
     if (res != RRC_DI_LIBDI_EIO)
     {
         /* spin up the drive */
-        rrc_dbg_printf("failed to read disk_id: attempting drive reset\n");
+        rrc_dbg_printf("Spinning up the disc drive...\n");
         RRC_ASSERTEQ(rrc_di_reset(), RRC_DI_LIBDI_OK, "rrc_di_reset");
         res = rrc_di_get_disk_id(&did);
         RRC_ASSERTEQ(res, RRC_DI_LIBDI_OK, "rrc_di_get_disk_id (could not initialise drive)");
