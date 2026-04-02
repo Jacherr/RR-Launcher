@@ -19,7 +19,7 @@ This channel is set to replace the existing Riivolution-based launcher. It solve
 
 - It is very overengineered and contains many unused features,
 - It takes a long time to initially load,
-- It is diffiult and time consuming to maintain,
+- It is difficult and time consuming to maintain,
 - It has a tendency to randomly hardlock and/or crash,
 - It doesn't work with Dolphin.
 
