@@ -12,7 +12,7 @@
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-    
+
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
@@ -20,12 +20,14 @@
 #ifndef RRC_CRASH_H
 #define RRC_CRASH_H
 
+#include "settingsfile.h"
+
 /* 
     Run the post-crash handler.
     Prompts the user about the crash and asks them if they want to upload
     RetroRewind6/Crash.pul to the servers (if any such file exists).
     Then clears the flag and returns.
 */
-void rrc_crash_handle(void *xfb);
+void rrc_crash_handle(void *xfb, struct rrc_settingsfile *settings);
 
 #endif
