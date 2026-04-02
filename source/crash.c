@@ -23,21 +23,47 @@
 #include "prompt.h"
 #include "util.h"
 #include "time.h"
+#include "settingsfile.h"
 
-void rrc_crash_handle(void *xfb)
+void rrc_crash_handle(void *xfb, struct rrc_settingsfile *settings)
 {
-    char* lines[] = {
+    char *lines[] = {
         "- - - Retro Rewind crashed! - - -",
-        "",
+        "---------------------------------",
         "This could have been caused by faulty My Stuff",
         "files, online cheaters, a bug in the pack,",
         "or a corrupted installation.",
-        "",
-        "Please try disabling My Stuff. If the game still",
-        "crashes, please provide the written Crash.pul file",
-        "in RetroRewind6/Crash.pul to the development team",
-        "so that we can investigate."
     };
+    rrc_prompt_1_option(xfb, lines, 5, "Next");
 
-    rrc_prompt_1_option(xfb, lines, 10, "OK");
-} 
+    bool my_stuff_enabled = (settings->my_stuff != RRC_SETTINGSFILE_MY_STUFF_DEFAULT);
+
+    if (my_stuff_enabled)
+    {
+        char *lines2[] = {
+            "- - - Retro Rewind crashed! - - -",
+            "---------------------------------",
+            "It appears that you have My Stuff enabled.",
+            "Before reporting the crash, please try disabling it",
+            "and seeing if the crash still occurs."
+        };
+        rrc_prompt_1_option(xfb, lines2, 5, "OK");
+    }
+    else
+    {
+        char *lines2[] = {
+            "- - - Retro Rewind crashed! - - -",
+            "---------------------------------",
+            "If the crash is consistent, try reinstalling",
+            "Retro Rewind. Make sure to precisely follow the",
+            "instructions found on https://rwfc.net/downloads,",
+            "and do not manually delete any files.",
+            "",
+            "A crash file was written to sd:/RetroRewind6/Crash.pul.",
+            "If you continue to experience issues, please report it",
+            "along with this file to our Discord server:",
+            "https://discord.gg/retrorewind",
+        };
+        rrc_prompt_1_option(xfb, lines2, 11, "OK");
+    }
+}
