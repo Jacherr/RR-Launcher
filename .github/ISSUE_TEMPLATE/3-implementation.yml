@@ -1,0 +1,29 @@
+name: "Feature Implementation"
+description: "Feature implementation form"
+labels: ["feature", "implementation"]
+body:
+- type: "markdown"
+  attributes:
+    value: "This form is intended for developers to track an implementation of a feature."
+- type: "markdown"
+  attributes:
+    value: "### Implementation guidelines\n- Test features, that you're implementing.\n  - Large feature implementations should be tested by a broader part of the team or the Retro Rewind Testers.\n- Credit co-authors and address contributors for the feature, that you're implementing."
+- type: "textarea"
+  attributes:
+    label: "Version"
+    description: "What version is the pack on, at the time of planning this implementation?"
+    placeholder: "v6.7"
+  validations:
+    required: true
+- type: "textarea"
+  attributes:
+    label: "Feature description"
+    description: "What would the feature you're suggesting do?"
+  validations:
+    required: true
+- type: "textarea"
+  attributes:
+    label: "Pitch"
+    description: "What is the idea behind this feature?"
+  validations:
+    required: false

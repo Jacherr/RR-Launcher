@@ -1,0 +1,29 @@
+name: "Feature Suggestion"
+description: "Feature suggestion form"
+labels: ["feature", "discussion"]
+body:
+- type: "markdown"
+  attributes:
+    value: "This form is to suggest features.\nNon-technical users can suggest features on the [Retro Rewind Discord Server](https://discord.gg/RetroRewind) in the rr-channel-beta-support channel aswell."
+- type: "markdown"
+  attributes:
+    value: "### Suggestion guidelines\n- Try to only suggest features, that you expect a significant number of the broad Retro Rewind player base to adopt.\n  - If the feature would be one only used by a niche group of players, try to think bigger. Consider thinking a few steps ahead to make the feature useful for the broad Retro Rewind player base."
+- type: "textarea"
+  attributes:
+    label: "Version"
+    description: "What version is the pack on, at the time of making this suggestion?"
+    placeholder: "v6.7"
+  validations:
+    required: true
+- type: "textarea"
+  attributes:
+    label: "Feature description"
+    description: "What would the feature you're suggesting do?"
+  validations:
+    required: true
+- type: "textarea"
+  attributes:
+    label: "Pitch"
+    description: "What makes this feature stand out and be useful for the broad Retro Rewind player base?"
+  validations:
+    required: true
