@@ -10,6 +10,7 @@
    Dave Murphy (WinterMute)
    Sven Peter <svpe@gmx.net>
    Alex Chadwick (Chadderz)
+   James Croucher (Jacher)
 	
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
@@ -35,11 +36,12 @@
 
 #include <io/disc_io.h>
 #include <io/libsd.h>
-#include <rvl/ipc.h>
+#include <gccore.h>
 #include <stdint.h>
 #include <string.h>
 #include <string.h>
 #include <time.h>
+#include "../../util.h"
 
 #define SDIO_HEAPSIZE				(5*1024)
  
@@ -105,20 +107,45 @@
 #define SDIO_ACMD_SENDSCR			0x33
 #define	SDIO_ACMD_SENDOPCOND		0x29
 
-#define	SDIO_STATUS_CARD_INSERTED		0x1
-#define	SDIO_STATUS_CARD_INITIALIZED	0x10000
-#define SDIO_STATUS_CARD_SDHC			0x100000
+#define	SDIO_STATUS_CARD_INSERTED				0x1
+#define SDIO_STATUS_CARD_WRITE_PROTECTED		0x4
+#define	SDIO_STATUS_CARD_INITIALIZED			0x10000
+#define SDIO_STATUS_CARD_SDHC					0x100000
 
 #define READ_BL_LEN					((uint8_t)(__sd0_csd[5]&0x0f))
 #define WRITE_BL_LEN				((uint8_t)(((__sd0_csd[12]&0x03)<<2)|((__sd0_csd[13]>>6)&0x03)))
 
-#define ATTRIBUTE_ALIGN(x) __attribute__((aligned(x)))
 // courtesy of Marcan
 #define STACK_ALIGN(type, name, cnt, alignment)		uint8_t _al__##name[((sizeof(type)*(cnt)) + (alignment) + (((sizeof(type)*(cnt))%(alignment)) > 0 ? ((alignment) - ((sizeof(type)*(cnt))%(alignment))) : 0))]; \
 													type *name = (type*)(((uint32_t)(_al__##name)) + ((alignment) - (((uint32_t)(_al__##name))&((alignment)-1))))
 
-													
-void msleep(int ms);
+
+const char* sdio_get_error_message(SDIO_RESULT result) {
+	switch(result) {
+		case SDIO_STARTUP_SUCCESS:
+			return "Success";
+		case SDIO_STARTUP_NO_CARD:
+			return "No SD card detected";
+		case SDIO_STARTUP_INIT_FAILED:
+			return "Failed to initialize SD card";
+		case SDIO_STARTUP_OTHER_ERROR:
+			return "An unknown error occurred while initializing the SD card";
+		case LIBFAT_ERROR_MOUNT_FAILED:
+			return "Failed to mount the SD card filesystem. The card may be corrupted.";
+		case LIBFAT_ERROR_WRITE_PROTECTED:
+			return "The SD card is write protected. Please remove the write protection and try again.";
+		case SDIO_READ_ERROR:
+			return "An error occurred while reading from the SD card.";
+		case SDIO_WRITE_ERROR:
+			return "An error occurred while writing to the SD card.";
+		default:
+			return "An unknown error code was returned from the SD card initialization process.";
+	}
+}
+
+void msleep(uint32_t ms) {
+	usleep(ms * 1000);
+}
 
 static uint8_t *rw_buffer = NULL;
 
@@ -203,7 +230,10 @@ static int __sdio_getstatus()
 {
 	int ret;
 	STACK_ALIGN(uint32_t,status,1,32);
- 
+
+	*status = -1;
+	rrc_invalidate_cache(status, sizeof(uint32_t));
+
 	ret = IOS_Ioctl(__sd0_fd,IOCTL_SDIO_GETSTATUS,NULL,0,status,sizeof(uint32_t));
 	if(ret<0) return ret;
  
@@ -384,7 +414,7 @@ static int __sd0_getcid()
 }
 
 
-static	bool __sd0_initio()
+static s32 __sd0_initio()
 {
 	int ret;
 	int tries;
@@ -395,7 +425,10 @@ static	bool __sd0_initio()
 	status = __sdio_getstatus();
 	
 	if(!(status & SDIO_STATUS_CARD_INSERTED))
-		return false;
+		return SDIO_STARTUP_NO_CARD;
+
+	if(status & SDIO_STATUS_CARD_WRITE_PROTECTED)
+		return LIBFAT_ERROR_WRITE_PROTECTED;
 
 	if(!(status & SDIO_STATUS_CARD_INITIALIZED))
 	{
@@ -471,36 +504,36 @@ static	bool __sd0_initio()
 		__sd0_sdhc = 0;
  
 	ret = __sdio_setbuswidth(4);
-	if(ret<0) return false;
+	if(ret<0) return SDIO_STARTUP_INIT_FAILED;
  
 	ret = __sdio_setclock(1);
-	if(ret<0) return false;
+	if(ret<0) return SDIO_STARTUP_INIT_FAILED;
  
 	ret = __sd0_select();
-	if(ret<0) return false;
+	if(ret<0) return SDIO_STARTUP_INIT_FAILED;
  
 	ret = __sd0_setblocklength(PAGE_SIZE512);
 	if(ret<0) {
 		ret = __sd0_deselect();
-		return false;
+		return SDIO_STARTUP_INIT_FAILED;
 	}
  
 	ret = __sd0_setbuswidth(4);
 	if(ret<0) {
 		ret = __sd0_deselect();
-		return false;
+		return SDIO_STARTUP_INIT_FAILED;
 	}
 	__sd0_deselect();
 
 	__sd0_initialized = 1;
-	return true;
+	return SDIO_STARTUP_SUCCESS;
 
 	fail:
 	__sdio_sethcr(SDIOHCR_SOFTWARERESET, 1, 7);
 	__sdio_waithcr(SDIOHCR_SOFTWARERESET, 1, 1, 7);
 	IOS_Close(__sd0_fd);
 	__sd0_fd = IOS_Open(_sd0_fs,1);
-	return false;
+	return SDIO_STARTUP_INIT_FAILED;
 }
 
 bool sdio_Deinitialize()
@@ -513,32 +546,32 @@ bool sdio_Deinitialize()
 	return true;
 }
 
-bool sdio_Startup()
+s32 sdio_Startup()
 {
-    static char heap[SDIO_HEAPSIZE] ATTRIBUTE_ALIGN(32);
 	if(__sdio_initialized==1) return true;
  
 	if(hId<0) {
-		hId = iosCreateHeap(heap, SDIO_HEAPSIZE);
-		if(hId<0) return false;
+		hId = iosCreateHeap(SDIO_HEAPSIZE);
+		if(hId<0) return SDIO_STARTUP_OTHER_ERROR;
 	}
 
 	if(rw_buffer == NULL) rw_buffer = iosAlloc(hId,(4*1024));
-	if(rw_buffer == NULL) return false;
+	if(rw_buffer == NULL) return SDIO_STARTUP_OTHER_ERROR;
  
 	__sd0_fd = IOS_Open(_sd0_fs,1);
 
 	if(__sd0_fd<0) {
 		sdio_Deinitialize();
-		return false;
+		return SDIO_STARTUP_OTHER_ERROR;
 	}
  
-	if(__sd0_initio()==false) {
+	s32 initres = __sd0_initio();
+	if(initres != SDIO_STARTUP_SUCCESS) {
 		sdio_Deinitialize();
-		return false;
+		return initres;
 	}
 	__sdio_initialized = 1;
-	return true;
+	return SDIO_STARTUP_SUCCESS;
 }
  
  
@@ -646,13 +679,22 @@ bool sdio_IsInitialized()
 			SDIO_STATUS_CARD_INITIALIZED);
 }
 
-const RRC_DISC_INTERFACE __io_wiisd = {
+bool sdio_GetStatus(u32* status)
+{
+	int ret = __sdio_getstatus();
+	if(ret < 0) return false;
+	*status = (u32)ret;
+	return true;
+}
+
+const RRC_DISC_INTERFACE __rrc_io_wiisd = {
 	DEVICE_TYPE_WII_SD,
 	FEATURE_MEDIUM_CANREAD | FEATURE_MEDIUM_CANWRITE | FEATURE_WII_SD,
-	(FN_MEDIUM_STARTUP)&sdio_Startup,
-	(FN_MEDIUM_ISINSERTED)&sdio_IsInserted,
-	(FN_MEDIUM_READSECTORS)&sdio_ReadSectors,
-	(FN_MEDIUM_WRITESECTORS)&sdio_WriteSectors,
-	(FN_MEDIUM_CLEARSTATUS)&sdio_ClearStatus,
-	(FN_MEDIUM_SHUTDOWN)&sdio_Shutdown
+	(RRC_FN_MEDIUM_STARTUP)&sdio_Startup,
+	(RRC_FN_MEDIUM_ISINSERTED)&sdio_IsInserted,
+	(RRC_FN_MEDIUM_READSECTORS)&sdio_ReadSectors,
+	(RRC_FN_MEDIUM_WRITESECTORS)&sdio_WriteSectors,
+	(RRC_FN_MEDIUM_CLEARSTATUS)&sdio_ClearStatus,
+	(RRC_FN_MEDIUM_SHUTDOWN)&sdio_Shutdown,
+	(RRC_FN_MEDIUM_GETSTATUS)&sdio_GetStatus
 };

@@ -1,14 +1,10 @@
 /*
+ mem_allocate.h
+ Memory allocation and destruction calls
+ Replace these calls with custom allocators if
+ malloc is unavailable
 
-  wii_sd.h
-
-  Hardware interface for libfat Wii internal SD
-
- Copyright (c) 2008 - 2014
-   Michael Wiedenbauer (shagkur)
-   Dave Murphy (WinterMute)
-   Alex Chadwick (Chadderz)
-
+ Copyright (c) 2006 Michael "Chishm" Chisholm
 	
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
@@ -32,13 +28,25 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __WIISD_IO_H__
-#define __WIISD_IO_H__
+#ifndef _MEM_ALLOCATE_H
+#define _MEM_ALLOCATE_H
 
-#include <io/disc_io.h>
+#include <malloc.h>
 
-#define DEVICE_TYPE_WII_SD (('W'<<24)|('I'<<16)|('S'<<8)|'D')
+static inline void* _FAT_mem_allocate (size_t size) {
+	return malloc (size);
+}
 
-extern const RRC_DISC_INTERFACE __io_wiisd;
-
+static inline void* _FAT_mem_align (size_t size) {
+#ifdef __wii__
+	return memalign (32, size);
+#else
+	return malloc (size);
 #endif
+}
+
+static inline void _FAT_mem_free (void* mem) {
+	free (mem);
+}
+
+#endif // _MEM_ALLOCATE_H

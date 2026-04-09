@@ -1,14 +1,8 @@
 /*
+ filetime.h
+ Conversion of file time and date values to various other types
 
-  wii_sd.h
-
-  Hardware interface for libfat Wii internal SD
-
- Copyright (c) 2008 - 2014
-   Michael Wiedenbauer (shagkur)
-   Dave Murphy (WinterMute)
-   Alex Chadwick (Chadderz)
-
+ Copyright (c) 2006 Michael "Chishm" Chisholm
 	
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
@@ -32,13 +26,16 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __WIISD_IO_H__
-#define __WIISD_IO_H__
+#ifndef _FILETIME_H
+#define _FILETIME_H
 
-#include <io/disc_io.h>
+#include "common.h"
+#include <sys/types.h>
 
-#define DEVICE_TYPE_WII_SD (('W'<<24)|('I'<<16)|('S'<<8)|'D')
+uint16_t _FAT_filetime_getTimeFromRTC (void);
+uint16_t _FAT_filetime_getDateFromRTC (void);
 
-extern const RRC_DISC_INTERFACE __io_wiisd;
+time_t _FAT_filetime_to_time_t (uint16_t t, uint16_t d);
 
-#endif
+
+#endif // _FILETIME_H

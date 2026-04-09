@@ -17,18 +17,22 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <fat.h>
+#include <io/fat.h>
+#include <io/libsd.h>
 #include "unistd.h"
 
 #include "sd.h"
 #include <sys/dirent.h>
 #include "update/update.h"
+#include "util.h"
+#include "time.h"
 
 struct rrc_result rrc_sd_init()
 {
-    if (!fatInitDefault())
+    s32 initres = rrcFatInitDefault();
+    if (initres != SDIO_STARTUP_SUCCESS)
     {
-        return rrc_result_create_error_sdcard(EIO, "Couldn't mount the SD card - is it inserted?");
+        return rrc_result_create_error_sdcard(EIO, sdio_get_error_message(initres));
     }
 
     if (chdir("sd:/") == -1)

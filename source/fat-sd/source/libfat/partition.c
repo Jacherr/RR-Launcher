@@ -3,7 +3,6 @@
  Functions for mounting and dismounting partitions
  on various block devices.
 
- Edited 2014 by Alex Chadwick for inclusion in bslug
  Copyright (c) 2006 Michael "Chishm" Chisholm
 
  Redistribution and use in source and binary forms, with or without modification,
@@ -32,10 +31,12 @@
 #include "bit_ops.h"
 #include "file_allocation_table.h"
 #include "directory.h"
+#include "mem_allocate.h"
 #include "fatfile.h"
 
 #include <string.h>
 #include <ctype.h>
+#include <sys/iosupport.h>
 
 /*
 Data offsets
@@ -99,8 +100,16 @@ enum FSIB
 };
 
 static const char FAT_SIG[3] = {'F', 'A', 'T'};
-static const uint32_t FS_INFO_SIG1 = 0x41615252; /* 'RRaA' in little endian */
-static const uint32_t FS_INFO_SIG2 = 0x61417272; /* 'rrAa' in little endian */
+static const char FS_INFO_SIG1[4] = {'R', 'R', 'a', 'A'};
+static const char FS_INFO_SIG2[4] = {'r', 'r', 'A', 'a'};
+static const char FS_TWL_SIG[8] = { 0xe9, 0x00, 0x00, 0x54, 0x57, 0x4c, 0x20, 0x20 };
+
+static bool isValidMBR(uint8_t *sectorBuffer) {
+	return (!memcmp(sectorBuffer + BPB_FAT16_fileSysType, FAT_SIG, sizeof(FAT_SIG)) ||
+			!memcmp(sectorBuffer + BPB_FAT32_fileSysType, FAT_SIG, sizeof(FAT_SIG)) ||
+			!memcmp(sectorBuffer, FS_TWL_SIG, sizeof(FS_TWL_SIG)));
+
+}
 
 sec_t FindFirstValidPartition_buf(const RRC_DISC_INTERFACE* disc, uint8_t *sectorBuffer)
 {
@@ -119,8 +128,8 @@ sec_t FindFirstValidPartition_buf(const RRC_DISC_INTERFACE* disc, uint8_t *secto
 	for(i=0;i<4;i++,ptr+=16) {
 		sec_t part_lba = u8array_to_u32(ptr, 0x8);
 
-		if (!memcmp(sectorBuffer + BPB_FAT16_fileSysType, FAT_SIG, sizeof(FAT_SIG)) ||
-			!memcmp(sectorBuffer + BPB_FAT32_fileSysType, FAT_SIG, sizeof(FAT_SIG))) {
+		if (isValidMBR(sectorBuffer))
+		{
 			return part_lba;
 		}
 
@@ -140,8 +149,7 @@ sec_t FindFirstValidPartition_buf(const RRC_DISC_INTERFACE* disc, uint8_t *secto
 
 				if(!_FAT_disc_readSectors (disc, part_lba2, 1, sectorBuffer)) return 0;
 
-				if (!memcmp(sectorBuffer + BPB_FAT16_fileSysType, FAT_SIG, sizeof(FAT_SIG)) ||
-					!memcmp(sectorBuffer + BPB_FAT32_fileSysType, FAT_SIG, sizeof(FAT_SIG)))
+				if (isValidMBR(sectorBuffer))
 				{
 					return part_lba2;
 				}
@@ -150,8 +158,10 @@ sec_t FindFirstValidPartition_buf(const RRC_DISC_INTERFACE* disc, uint8_t *secto
 			}
 		} else {
 			if(!_FAT_disc_readSectors (disc, part_lba, 1, sectorBuffer)) return 0;
-			if (!memcmp(sectorBuffer + BPB_FAT16_fileSysType, FAT_SIG, sizeof(FAT_SIG)) ||
-				!memcmp(sectorBuffer + BPB_FAT32_fileSysType, FAT_SIG, sizeof(FAT_SIG))) {
+
+
+			if (isValidMBR(sectorBuffer))
+			{
 				return part_lba;
 			}
 		}
@@ -159,23 +169,28 @@ sec_t FindFirstValidPartition_buf(const RRC_DISC_INTERFACE* disc, uint8_t *secto
 	return 0;
 }
 
-PARTITION* FAT_partition_constructor (const RRC_DISC_INTERFACE* disc, PARTITION *partition, uint8_t *cacheSpace, size_t cacheSize, sec_t startSector)
+sec_t FindFirstValidPartition(const RRC_DISC_INTERFACE* disc)
 {
-    uint8_t *sectorBuffer;
-    
-    sectorBuffer = cacheSpace;
-    
-    if (cacheSize < MAX_SECTOR_SIZE || cacheSpace == NULL) {
-        return NULL;
-    }
+	uint8_t *sectorBuffer = (uint8_t*) _FAT_mem_align(MAX_SECTOR_SIZE);
+	if (!sectorBuffer) return 0;
+	sec_t ret = FindFirstValidPartition_buf(disc, sectorBuffer);
+	_FAT_mem_free(sectorBuffer);
+	return ret;
+}
+
+PARTITION* _FAT_partition_constructor_buf (const RRC_DISC_INTERFACE* disc, uint32_t cacheSize, uint32_t sectorsPerPage, sec_t startSector, uint8_t *sectorBuffer, s32 *constatus)
+{
+	PARTITION* partition;
 
 	// Read first sector of disc
 	if (!_FAT_disc_readSectors (disc, startSector, 1, sectorBuffer)) {
+		*constatus = SDIO_READ_ERROR;
 		return NULL;
 	}
 
 	// Make sure it is a valid MBR or boot sector
 	if ( (sectorBuffer[BPB_bootSig_55] != 0x55) || (sectorBuffer[BPB_bootSig_AA] != 0xAA)) {
+		*constatus = LIBFAT_ERROR_MOUNT_FAILED;
 		return NULL;
 	}
 
@@ -190,18 +205,20 @@ PARTITION* FAT_partition_constructor (const RRC_DISC_INTERFACE* disc, PARTITION 
 	} else {
 		startSector = FindFirstValidPartition_buf(disc, sectorBuffer);
 		if (!_FAT_disc_readSectors (disc, startSector, 1, sectorBuffer)) {
+			*constatus = SDIO_READ_ERROR;
 			return NULL;
 		}
 	}
 
-	// Now verify that this is indeed a FAT partition
-	if (memcmp(sectorBuffer + BPB_FAT16_fileSysType, FAT_SIG, sizeof(FAT_SIG)) &&
-		memcmp(sectorBuffer + BPB_FAT32_fileSysType, FAT_SIG, sizeof(FAT_SIG)))
+	if (!isValidMBR(sectorBuffer))
 	{
+		*constatus = LIBFAT_ERROR_MOUNT_FAILED;
 		return NULL;
 	}
 
+	partition = (PARTITION*) _FAT_mem_allocate (sizeof(PARTITION));
 	if (partition == NULL) {
+		*constatus = SDIO_STARTUP_OTHER_ERROR;
 		return NULL;
 	}
 
@@ -230,6 +247,9 @@ PARTITION* FAT_partition_constructor (const RRC_DISC_INTERFACE* disc, PARTITION 
 
 	partition->bytesPerSector = u8array_to_u16(sectorBuffer, BPB_bytesPerSector);
 	if(partition->bytesPerSector < MIN_SECTOR_SIZE || partition->bytesPerSector > MAX_SECTOR_SIZE) {
+		// Unsupported sector size
+		_FAT_mem_free(partition);
+		*constatus = LIBFAT_ERROR_MOUNT_FAILED;
 		return NULL;
 	}
 
@@ -274,7 +294,7 @@ PARTITION* FAT_partition_constructor (const RRC_DISC_INTERFACE* disc, PARTITION 
 	}
 
 	// Create a cache to use
-	partition->cache = _FAT_cache_constructor (cacheSpace, cacheSize, partition->disc, startSector+partition->numberOfSectors, partition->bytesPerSector);
+	partition->cache = _FAT_cache_constructor (cacheSize, sectorsPerPage, partition->disc, startSector+partition->numberOfSectors, partition->bytesPerSector);
 
 	// Set current directory to the root
 	partition->cwdCluster = partition->rootDirCluster;
@@ -288,11 +308,26 @@ PARTITION* FAT_partition_constructor (const RRC_DISC_INTERFACE* disc, PARTITION 
 
 	_FAT_partition_readFSinfo(partition);
 
+	*constatus = SDIO_STARTUP_SUCCESS;
 	return partition;
 }
 
+#include "../../time.h"
 
-void FAT_partition_destructor (PARTITION* partition) {
+PARTITION* _FAT_partition_constructor (const RRC_DISC_INTERFACE* disc, uint32_t cacheSize, uint32_t sectorsPerPage, sec_t startSector, s32* constatus)
+{
+	*constatus = SDIO_STARTUP_OTHER_ERROR;
+	uint8_t *sectorBuffer = (uint8_t*) _FAT_mem_align(MAX_SECTOR_SIZE);
+	if (!sectorBuffer) return NULL;
+	PARTITION *ret = _FAT_partition_constructor_buf(disc, cacheSize,
+			sectorsPerPage, startSector, sectorBuffer, constatus);
+	_FAT_mem_free(sectorBuffer);
+	if(ret) { *constatus = SDIO_STARTUP_SUCCESS; }
+	return ret;
+}
+
+
+void _FAT_partition_destructor (PARTITION* partition) {
 	FILE_STRUCT* nextFile;
 
 	_FAT_lock(&partition->lock);
@@ -300,7 +335,7 @@ void FAT_partition_destructor (PARTITION* partition) {
 	// Synchronize open files
 	nextFile = partition->firstOpenFile;
 	while (nextFile) {
-		FAT_syncToDisc (nextFile);
+		_FAT_syncToDisc (nextFile);
 		nextFile = nextFile->nextOpenFile;
 	}
 
@@ -313,6 +348,28 @@ void FAT_partition_destructor (PARTITION* partition) {
 	// Unlock the partition and destroy the lock
 	_FAT_unlock(&partition->lock);
 	_FAT_lock_deinit(&partition->lock);
+
+	// Free memory used by the partition
+	_FAT_mem_free (partition);
+}
+
+PARTITION* _FAT_partition_getPartitionFromPath (const char* path) {
+	const devoptab_t *devops;
+
+	devops = GetDeviceOpTab (path);
+
+	if (!devops) {
+		return NULL;
+	}
+
+	return (PARTITION*)devops->deviceData;
+}
+
+static void _FAT_updateFS_INFO(PARTITION * partition, uint8_t *sectorBuffer) {
+	partition->fat.numberFreeCluster = _FAT_fat_freeClusterCount(partition);
+	u32_to_u8array(sectorBuffer, FSIB_numberOfFreeCluster, partition->fat.numberFreeCluster);
+	u32_to_u8array(sectorBuffer, FSIB_numberLastAllocCluster, partition->fat.numberLastAllocCluster);
+	_FAT_disc_writeSectors (partition->disc, partition->fsInfoSector, 1, sectorBuffer);
 }
 
 void _FAT_partition_createFSinfo(PARTITION * partition)
@@ -320,92 +377,89 @@ void _FAT_partition_createFSinfo(PARTITION * partition)
 	if(partition->readOnly || partition->filesysType != FS_FAT32)
 		return;
 
-    /* FIXME: this code used to be written as an atomic read/update/write rather
-     * than lots of writes. Is this new version a problem? We could introduce
-     * cache locking if so. */
-	if (!_FAT_cache_writeSector(partition->cache, NULL, partition->fsInfoSector))
-        return;
+	uint8_t *sectorBuffer = (uint8_t*) _FAT_mem_align(partition->bytesPerSector);
+	if (!sectorBuffer) return;
+	memset(sectorBuffer, 0, partition->bytesPerSector);
 
-    _FAT_cache_writeLittleEndianValue(partition->cache, FS_INFO_SIG1, partition->fsInfoSector, FSIB_SIG1, 4);
-    _FAT_cache_writeLittleEndianValue(partition->cache, FS_INFO_SIG2, partition->fsInfoSector, FSIB_SIG2, 4);
+	int i;
+	for(i = 0; i < 4; ++i)
+	{
+		sectorBuffer[FSIB_SIG1+i] = FS_INFO_SIG1[i];
+		sectorBuffer[FSIB_SIG2+i] = FS_INFO_SIG2[i];
+	}
 
-	partition->fat.numberFreeCluster = _FAT_fat_freeClusterCount(partition);
-    _FAT_cache_writeLittleEndianValue(partition->cache, partition->fat.numberFreeCluster, partition->fsInfoSector, FSIB_numberOfFreeCluster, 4);
-    _FAT_cache_writeLittleEndianValue(partition->cache, partition->fat.numberLastAllocCluster, partition->fsInfoSector, FSIB_numberLastAllocCluster, 4);
-    
-    _FAT_cache_writeLittleEndianValue(partition->cache, 0x55, partition->fsInfoSector, FSIB_bootSig_55, 1);
-    _FAT_cache_writeLittleEndianValue(partition->cache, 0xAA, partition->fsInfoSector, FSIB_bootSig_AA, 1);
+	sectorBuffer[FSIB_bootSig_55] = 0x55;
+	sectorBuffer[FSIB_bootSig_AA] = 0xAA;
 
-    _FAT_cache_flush(partition->cache);
+	_FAT_updateFS_INFO(partition,sectorBuffer);
+
+	_FAT_mem_free(sectorBuffer);
 }
 
 void _FAT_partition_readFSinfo(PARTITION * partition)
 {
-    uint32_t buffer;
-    
 	if(partition->filesysType != FS_FAT32)
 		return;
-    
-    /* FIXME: this code used to be written as an atomic read/check rather than
-     * lots of individual reads. Is this new version a problem? We could
-     * introduce cache locking if so. */   
-    if (!_FAT_cache_readLittleEndianValue(partition->cache, &buffer, partition->fsInfoSector, FSIB_SIG1, 4)) {
-        return;
-    }
 
-	if(buffer != FS_INFO_SIG1)
-        goto create_fs_info;
-        
-    if (!_FAT_cache_readLittleEndianValue(partition->cache, &buffer, partition->fsInfoSector, FSIB_SIG2, 4)) {
-        return;
-    }
-        
-	if(buffer != FS_INFO_SIG2)
-        goto create_fs_info;
-        
-    if (!_FAT_cache_readLittleEndianValue(partition->cache, &buffer, partition->fsInfoSector, FSIB_numberOfFreeCluster, 4)) {
-        return;
-    }
+	uint8_t *sectorBuffer = (uint8_t*) _FAT_mem_align(partition->bytesPerSector);
+	if (!sectorBuffer) return;
+	memset(sectorBuffer, 0, partition->bytesPerSector);
+	// Read first sector of disc
+	if (!_FAT_disc_readSectors (partition->disc, partition->fsInfoSector, 1, sectorBuffer)) {
+		_FAT_mem_free(sectorBuffer);
+		return;
+	}
 
-	if (buffer == 0)
-        goto create_fs_info;
-    
-    _FAT_cache_readLittleEndianValue(partition->cache, &partition->fat.numberFreeCluster, partition->fsInfoSector, FSIB_numberOfFreeCluster, 4);
-    _FAT_cache_readLittleEndianValue(partition->cache, &partition->fat.numberLastAllocCluster, partition->fsInfoSector, FSIB_numberLastAllocCluster, 4);
-    
-    return;
-    
-create_fs_info:
-    //sector does not yet exist, create one!
-    _FAT_partition_createFSinfo(partition);
+	if(memcmp(sectorBuffer+FSIB_SIG1, FS_INFO_SIG1, 4) != 0 ||
+		memcmp(sectorBuffer+FSIB_SIG2, FS_INFO_SIG2, 4) != 0 ||
+		u8array_to_u32(sectorBuffer, FSIB_numberOfFreeCluster) == 0)
+	{
+		//sector does not yet exist, create one!
+		_FAT_partition_createFSinfo(partition);
+	} else {
+		partition->fat.numberFreeCluster = u8array_to_u32(sectorBuffer, FSIB_numberOfFreeCluster);
+		if(partition->fat.numberFreeCluster == 0xffffffff) {
+			_FAT_updateFS_INFO(partition,sectorBuffer);
+			partition->fat.numberFreeCluster = u8array_to_u32(sectorBuffer, FSIB_numberOfFreeCluster);
+		}
+		partition->fat.numberLastAllocCluster = u8array_to_u32(sectorBuffer, FSIB_numberLastAllocCluster);
+	}
+	_FAT_mem_free(sectorBuffer);
 }
 
 void _FAT_partition_writeFSinfo(PARTITION * partition)
 {
-    uint32_t buffer;
-    
 	if(partition->filesysType != FS_FAT32)
 		return;
 
-    /* FIXME: this code used to be written as an atomic read/update/write rather
-     * than lots of writes. Is this new version a problem? We could introduce
-     * cache locking if so. */ 
-    if (!_FAT_cache_readLittleEndianValue(partition->cache, &buffer, partition->fsInfoSector, FSIB_SIG1, 4)) {
-        return;
-    }
-	if(buffer != FS_INFO_SIG1) {
-        return;
-    }
-        
-    if (!_FAT_cache_readLittleEndianValue(partition->cache, &buffer, partition->fsInfoSector, FSIB_SIG2, 4)) {
-        return;
-    }
-	if(buffer != FS_INFO_SIG2) {
-        return;
-    }
+	uint8_t *sectorBuffer = (uint8_t*) _FAT_mem_align(partition->bytesPerSector);
+	if (!sectorBuffer) return;
+	memset(sectorBuffer, 0, partition->bytesPerSector);
+	// Read first sector of disc
+	if (!_FAT_disc_readSectors (partition->disc, partition->fsInfoSector, 1, sectorBuffer)) {
+		_FAT_mem_free(sectorBuffer);
+		return;
+	}
 
-    _FAT_cache_writeLittleEndianValue(partition->cache, partition->fat.numberFreeCluster, partition->fsInfoSector, FSIB_numberOfFreeCluster, 4);
-    _FAT_cache_writeLittleEndianValue(partition->cache, partition->fat.numberLastAllocCluster, partition->fsInfoSector, FSIB_numberLastAllocCluster, 4);
+	if(memcmp(sectorBuffer+FSIB_SIG1, FS_INFO_SIG1, 4) || memcmp(sectorBuffer+FSIB_SIG2, FS_INFO_SIG2, 4)) {
+		_FAT_mem_free(sectorBuffer);
+		return;
+	}
 
-    _FAT_cache_flush(partition->cache);
+	u32_to_u8array(sectorBuffer, FSIB_numberOfFreeCluster, partition->fat.numberFreeCluster);
+	u32_to_u8array(sectorBuffer, FSIB_numberLastAllocCluster, partition->fat.numberLastAllocCluster);
+
+	// Write first sector of disc
+	_FAT_disc_writeSectors (partition->disc, partition->fsInfoSector, 1, sectorBuffer);
+	_FAT_mem_free(sectorBuffer);
+}
+
+uint32_t* _FAT_getCwdClusterPtr(const char* name) {
+	PARTITION *partition = _FAT_partition_getPartitionFromPath(name);
+
+	if (!partition) {
+		return NULL;
+	}
+
+	return &partition->cwdCluster;
 }

@@ -2,6 +2,8 @@
  disc_io.h
  Interface template for low level disc functions.
  
+ Edited 2026 for inclusion in Retro Rewind Channel (c) James "Jacher" Croucher
+
  Edited 2014 by Alex Chadwick for inclusion in bslug
  Copyright (c) 2006 Michael "Chishm" Chisholm
  Based on code originally written by MightyMax
@@ -28,12 +30,12 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OGC_DISC_IO_INCLUDE
-#define OGC_DISC_IO_INCLUDE
+#ifndef RRC_OGC_DISC_IO_INCLUDE
+#define	RRC_OGC_DISC_IO_INCLUDE
 
 #include <stdbool.h>
 #include <stdint.h>
-
+#include <gccore.h>
 
 #define FEATURE_MEDIUM_CANREAD      0x00000001
 #define FEATURE_MEDIUM_CANWRITE     0x00000002
@@ -46,24 +48,41 @@
 
 typedef uint32_t sec_t;
 
-typedef bool (* FN_MEDIUM_STARTUP)(void) ;
-typedef bool (* FN_MEDIUM_ISINSERTED)(void) ;
-typedef bool (* FN_MEDIUM_READSECTORS)(sec_t sector, sec_t numSectors, void* buffer) ;
-typedef bool (* FN_MEDIUM_WRITESECTORS)(sec_t sector, sec_t numSectors, const void* buffer) ;
-typedef bool (* FN_MEDIUM_CLEARSTATUS)(void) ;
-typedef bool (* FN_MEDIUM_SHUTDOWN)(void) ;
+// prefix with rrc to prevent collision
+typedef s32 (* RRC_FN_MEDIUM_STARTUP)(void) ;
+typedef bool (* RRC_FN_MEDIUM_ISINSERTED)(void) ;
+typedef bool (* RRC_FN_MEDIUM_READSECTORS)(sec_t sector, sec_t numSectors, void* buffer) ;
+typedef bool (* RRC_FN_MEDIUM_WRITESECTORS)(sec_t sector, sec_t numSectors, const void* buffer) ;
+typedef bool (* RRC_FN_MEDIUM_CLEARSTATUS)(void) ;
+typedef bool (* RRC_FN_MEDIUM_SHUTDOWN)(void) ;
+typedef bool (* RRC_FN_MEDIUM_GETSTATUS)(u32* status) ;
+
+typedef enum {
+	SDIO_STARTUP_SUCCESS = 0,
+	SDIO_STARTUP_NO_CARD = -1,
+	SDIO_STARTUP_INIT_FAILED = -2,
+	SDIO_STARTUP_OTHER_ERROR = -3,
+	LIBFAT_ERROR_MOUNT_FAILED = -4,
+   	LIBFAT_ERROR_WRITE_PROTECTED = -5,
+	SDIO_READ_ERROR = -6,
+	SDIO_WRITE_ERROR = -7,
+} SDIO_RESULT;
+
+// Return a static string describing the error.
+const char* sdio_get_error_message(SDIO_RESULT result);
 
 struct RRC_DISC_INTERFACE_STRUCT {
 	unsigned long			ioType ;
 	unsigned long			features ;
-	FN_MEDIUM_STARTUP		startup ;
-	FN_MEDIUM_ISINSERTED	isInserted ;
-	FN_MEDIUM_READSECTORS	readSectors ;
-	FN_MEDIUM_WRITESECTORS	writeSectors ;
-	FN_MEDIUM_CLEARSTATUS	clearStatus ;
-	FN_MEDIUM_SHUTDOWN		shutdown ;
+	RRC_FN_MEDIUM_STARTUP		startup ;
+	RRC_FN_MEDIUM_ISINSERTED	isInserted ;
+	RRC_FN_MEDIUM_READSECTORS	readSectors ;
+	RRC_FN_MEDIUM_WRITESECTORS	writeSectors ;
+	RRC_FN_MEDIUM_CLEARSTATUS	clearStatus ;
+	RRC_FN_MEDIUM_SHUTDOWN		shutdown ;
+	RRC_FN_MEDIUM_GETSTATUS		getStatus ;
 } ;
 
 typedef struct RRC_DISC_INTERFACE_STRUCT RRC_DISC_INTERFACE ;
 
-#endif	// define OGC_DISC_IO_INCLUDE
+#endif	// define RRC_OGC_DISC_IO_INCLUDE

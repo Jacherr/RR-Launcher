@@ -39,6 +39,6 @@
 
 #define DEVICE_TYPE_WII_SD (('W'<<24)|('I'<<16)|('S'<<8)|'D')
 
-extern const RRC_DISC_INTERFACE __io_wiisd;
+extern const RRC_DISC_INTERFACE __rrc_io_wiisd;
 
 #endif

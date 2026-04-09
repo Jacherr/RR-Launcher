@@ -3,7 +3,6 @@
  Interface to the low level disc functions. Used by the higher level
  file system code.
  
- Edited 2014 by Alex Chadwick for inclusion in bslug
  Copyright (c) 2006 Michael "Chishm" Chisholm
 	
  Redistribution and use in source and binary forms, with or without modification,
@@ -31,6 +30,8 @@
 #define _DISC_H
 
 #include "common.h"
+#include "io/libsd.h"
+#include <gccore.h>
 
 /*
 A list of all default devices to try at startup, 
@@ -40,6 +41,7 @@ typedef struct {
 	const char* name; 
 	const RRC_DISC_INTERFACE* (*getInterface)(void);
 } INTERFACE_ID;
+extern const INTERFACE_ID _FAT_disc_interfaces[];
 
 /*
 Check if a disc is inserted
@@ -81,7 +83,7 @@ static inline bool _FAT_disc_clearStatus (const RRC_DISC_INTERFACE* disc) {
 /*
 Initialise the disc to a state ready for data reading or writing
 */
-static inline bool _FAT_disc_startup (const RRC_DISC_INTERFACE* disc) {
+static inline s32 _FAT_disc_startup (const RRC_DISC_INTERFACE* disc) {
 	return disc->startup();
 }
 

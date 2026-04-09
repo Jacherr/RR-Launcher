@@ -66,7 +66,7 @@ typedef enum FILE_ATTR FILE_ATTR;
  *  startSector - first sector of partition [0 unless you know otherwise]
  * Returns NULL on error. */
 PARTITION *FAT_partition_constructor(
-    const DISC_INTERFACE* disc, PARTITION *partition, uint8_t *cacheSpace,
+    const RRC_DISC_INTERFACE* disc, PARTITION *partition, uint8_t *cacheSpace,
     size_t cacheSize, sec_t startSector);
 /* Dismount the device and synchronise all open files to disc. */
 void FAT_partition_destructor(PARTITION* partition);
@@ -193,7 +193,7 @@ struct CACHE;
 struct _FILE_STRUCT;
 
 struct PARTITION {
-	const DISC_INTERFACE* disc;
+	const RRC_DISC_INTERFACE* disc;
 	struct CACHE*         cache;
 	// Info about the partition
 	FS_TYPE               filesysType;

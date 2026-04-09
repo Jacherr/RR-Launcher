@@ -1,15 +1,8 @@
 /*
+ lock.h
 
-  wii_sd.h
+ Copyright (c) 2008 Sven Peter <svpe@gmx.net>
 
-  Hardware interface for libfat Wii internal SD
-
- Copyright (c) 2008 - 2014
-   Michael Wiedenbauer (shagkur)
-   Dave Murphy (WinterMute)
-   Alex Chadwick (Chadderz)
-
-	
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
 
@@ -30,15 +23,50 @@
  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 */
 
-#ifndef __WIISD_IO_H__
-#define __WIISD_IO_H__
+#ifndef _LOCK_H
+#define _LOCK_H
 
-#include <io/disc_io.h>
+#include "common.h"
 
-#define DEVICE_TYPE_WII_SD (('W'<<24)|('I'<<16)|('S'<<8)|'D')
+#ifdef USE_LWP_LOCK
 
-extern const RRC_DISC_INTERFACE __io_wiisd;
+static inline void _FAT_lock_init(mutex_t *mutex)
+{
+	LWP_MutexInit(mutex, false);
+}
 
+static inline void _FAT_lock_deinit(mutex_t *mutex)
+{
+	LWP_MutexDestroy(*mutex);
+}
+
+static inline void _FAT_lock(mutex_t *mutex)
+{
+	LWP_MutexLock(*mutex);
+}
+
+static inline void _FAT_unlock(mutex_t *mutex)
+{
+	LWP_MutexUnlock(*mutex);
+}
+
+#else
+
+// We still need a blank lock type
+#ifndef mutex_t
+typedef int mutex_t;
 #endif
+
+void _FAT_lock_init(mutex_t *mutex);
+void _FAT_lock_deinit(mutex_t *mutex);
+void _FAT_lock(mutex_t *mutex);
+void _FAT_unlock(mutex_t *mutex);
+
+#endif // USE_LWP_LOCK
+
+
+#endif // _LOCK_H
+

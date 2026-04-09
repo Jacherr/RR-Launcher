@@ -9,7 +9,6 @@
  This also has the benefit of throwing out old sectors, so as not to keep
  too many stale pages around.
 
- Edited 2014 by Alex Chadwick for inclusion in bslug
  Copyright (c) 2006 Michael "Chishm" Chisholm
 
  Redistribution and use in source and binary forms, with or without modification,
@@ -41,69 +40,73 @@
 #include "cache.h"
 #include "disc.h"
 
+#include "mem_allocate.h"
 #include "bit_ops.h"
 #include "file_allocation_table.h"
 
 #define CACHE_FREE UINT_MAX
 
-#define SECTORS_PER_PAGE 8
-
-CACHE* _FAT_cache_constructor (uint8_t *cacheSpace, size_t cacheSize, const RRC_DISC_INTERFACE* discInterface, sec_t endOfPartition, unsigned int bytesPerSector) {
+CACHE* _FAT_cache_constructor (unsigned int numberOfPages, unsigned int sectorsPerPage, const RRC_DISC_INTERFACE* discInterface, sec_t endOfPartition, unsigned int bytesPerSector) {
 	CACHE* cache;
-	unsigned int i, numberOfPages;
+	unsigned int i;
 	CACHE_ENTRY* cacheEntries;
-    
-    if (cacheSize < sizeof(CACHE))
-        return NULL;
-    
-    numberOfPages = (cacheSize - sizeof(CACHE) - 32) / (sizeof(CACHE_ENTRY) + bytesPerSector * SECTORS_PER_PAGE);
 
 	if (numberOfPages < 2) {
-		return NULL;
+		numberOfPages = 2;
 	}
-    
-	cache = (CACHE*) cacheSpace;
+
+	if (sectorsPerPage < 8) {
+		sectorsPerPage = 8;
+	}
+
+	cache = (CACHE*) _FAT_mem_allocate (sizeof(CACHE));
 	if (cache == NULL) {
 		return NULL;
 	}
-    
-    cacheSpace += sizeof(CACHE);
 
 	cache->disc = discInterface;
 	cache->endOfPartition = endOfPartition;
 	cache->numberOfPages = numberOfPages;
-	cache->sectorsPerPage = SECTORS_PER_PAGE;
+	cache->sectorsPerPage = sectorsPerPage;
 	cache->bytesPerSector = bytesPerSector;
 
 
-	cacheEntries = cache->cacheEntries;
-    
-    cacheSpace += sizeof(CACHE_ENTRY) * numberOfPages;
-    /* align to 32 */
-    cacheSpace += (-(unsigned int)cacheSpace & 31);
+	cacheEntries = (CACHE_ENTRY*) _FAT_mem_allocate ( sizeof(CACHE_ENTRY) * numberOfPages);
+	if (cacheEntries == NULL) {
+		_FAT_mem_free (cache);
+		return NULL;
+	}
 
 	for (i = 0; i < numberOfPages; i++) {
 		cacheEntries[i].sector = CACHE_FREE;
 		cacheEntries[i].count = 0;
 		cacheEntries[i].last_access = 0;
 		cacheEntries[i].dirty = false;
-		cacheEntries[i].cache = cacheSpace;
-        
-        cacheSpace += bytesPerSector * SECTORS_PER_PAGE;
+		cacheEntries[i].cache = (uint8_t*) _FAT_mem_align ( sectorsPerPage * bytesPerSector );
 	}
+
+	cache->cacheEntries = cacheEntries;
 
 	return cache;
 }
 
 void _FAT_cache_destructor (CACHE* cache) {
+	unsigned int i;
 	// Clear out cache before destroying it
 	_FAT_cache_flush(cache);
+
+	// Free memory in reverse allocation order
+	for (i = 0; i < cache->numberOfPages; i++) {
+		_FAT_mem_free (cache->cacheEntries[i].cache);
+	}
+	_FAT_mem_free (cache->cacheEntries);
+	_FAT_mem_free (cache);
 }
 
 
-static uint32_t accessCounter = 0;
+static u32 accessCounter = 0;
 
-static uint32_t accessTime(){
+static u32 accessTime(){
 	accessCounter++;
 	return accessCounter;
 }
@@ -222,13 +225,10 @@ bool _FAT_cache_writePartialSector (CACHE* cache, const void* buffer, sec_t sect
 	if(entry==NULL) return false;
 
 	sec = sector - entry->sector;
-    if (buffer != NULL)
-        memcpy(entry->cache + ((sec*cache->bytesPerSector) + offset),buffer,size);
-    else
-        memset(entry->cache + ((sec*cache->bytesPerSector) + offset),0,size);
-        
-    entry->dirty = true;
-    return true;
+	memcpy(entry->cache + ((sec*cache->bytesPerSector) + offset),buffer,size);
+
+	entry->dirty = true;
+	return true;
 }
 
 bool _FAT_cache_writeLittleEndianValue (CACHE* cache, const uint32_t value, sec_t sector, unsigned int offset, int size) {
@@ -259,11 +259,10 @@ bool _FAT_cache_eraseWritePartialSector (CACHE* cache, const void* buffer, sec_t
 
 	sec = sector - entry->sector;
 	memset(entry->cache + (sec*cache->bytesPerSector),0,cache->bytesPerSector);
-    if (buffer != NULL)
-        memcpy(entry->cache + ((sec*cache->bytesPerSector) + offset),buffer,size);
+	memcpy(entry->cache + ((sec*cache->bytesPerSector) + offset),buffer,size);
 
-    entry->dirty = true;
-    return true;
+	entry->dirty = true;
+	return true;
 }
 
 
@@ -283,13 +282,9 @@ bool _FAT_cache_writeSectors (CACHE* cache, sec_t sector, sec_t numSectors, cons
 		secs_to_write = entry->count - sec;
 		if(secs_to_write>numSectors) secs_to_write = numSectors;
 
-        if (src != NULL) {
-            memcpy(entry->cache + (sec*cache->bytesPerSector),src,(secs_to_write*cache->bytesPerSector));
-            src += (secs_to_write*cache->bytesPerSector);
-        } else {
-            memset(entry->cache + (sec*cache->bytesPerSector),0,(secs_to_write*cache->bytesPerSector));
-        }
-        
+		memcpy(entry->cache + (sec*cache->bytesPerSector),src,(secs_to_write*cache->bytesPerSector));
+
+		src += (secs_to_write*cache->bytesPerSector);
 		sector += secs_to_write;
 		numSectors -= secs_to_write;
 
