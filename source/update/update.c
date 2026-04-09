@@ -304,7 +304,10 @@ struct rrc_result rrc_update_extract_zip_archive()
 
         if (stat.size > sd_free)
         {
-            return rrc_result_create_error_misc_update("Not enough free space on SD card for update");
+            // Report sizes
+            char msg[200];
+            snprintf(msg, 200, "Not enough free space on SD card for update. Needed: %llu bytes, available: %lu bytes", stat.size, sd_free);
+            return rrc_result_create_error_misc_update(msg);
         }
 
         if (stat.name[strlen(stat.name) - 1] == '/')
@@ -423,7 +426,10 @@ struct rrc_result rrc_update_do_updates_with_state(struct rrc_update_state *stat
 
         if (zipsz > sd_free)
         {
-            return rrc_result_create_error_misc_update("Not enough free space on SD card for update");
+            // Report sizes
+            char msg[200];
+            snprintf(msg, 200, "Not enough free space on SD card for update. Needed: %lu bytes, available: %lu bytes", (unsigned long)zipsz, sd_free);
+            return rrc_result_create_error_misc_update(msg);
         }
 
         TRY(rrc_update_download_zip(url, _RRC_UPDATE_ZIP_NAME, state->current_update_num, state->num_updates));
