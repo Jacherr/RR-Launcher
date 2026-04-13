@@ -20,10 +20,11 @@
 #define RRC_VERSIONSFILE_H
 
 #include "../result.h"
+#include "../version.h"
 
 struct rrc_versionsfile_deleted_file
 {
-    int version;
+    struct rrc_version version;
     char *path;
 };
 
@@ -40,12 +41,6 @@ struct rrc_versionsfile_deleted_file
 */
 int rrc_versionsfile_split_by(char *in, char by, char ***out, int *amt);
 void rrc_versionsfile_free_split(char **array, int count);
-
-/*
-    Returns an int specifying version information from a verstring.
-    E.g., 4.2.0 = 420
-*/
-struct rrc_result rrc_versionsfile_parse_verstring(char *verstring, int *version);
 
 /*
     Get version information from Retro Rewind servers.
@@ -65,8 +60,8 @@ int rrc_versionsfile_get_removed_files(char **result);
     Get an array of all URLs we need to download, where the first index needs downloading first.
     On success, return code is 0 and `result' is populated with an array of strings and `count' is set to the amount of entries.
 */
-struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *versionsfile, int current_version, int *count, char ***result, int **versions);
+struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *versionsfile, struct rrc_version *current_version, int *uamt, char ***urls, struct rrc_version **versions);
 
-struct rrc_result rrc_versionsfile_parse_deleted_files(char *input, int current_version, struct rrc_versionsfile_deleted_file **output, int *amt);
+struct rrc_result rrc_versionsfile_parse_deleted_files(char *input, struct rrc_version *current_version, struct rrc_versionsfile_deleted_file **output, int *amt);
 
 #endif

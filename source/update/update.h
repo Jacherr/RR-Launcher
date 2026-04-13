@@ -21,6 +21,7 @@
 
 #include <curl/curl.h>
 #include "../result.h"
+#include "../version.h"
 
 #define RRC_UPDATE_LARGE_THRESHOLD (long)(1000 * 1000 * 100) /* 100MB */
 #define RRC_VERSIONFILE "RetroRewind6/version.txt"
@@ -37,9 +38,9 @@ struct rrc_update_state
     /* All URLs for updates, in order. Length = num_updates */
     char **update_urls;
     /* Version of each update. Has the same length as `update_urls` and each index into update_urls is also valid for update_versions */
-    int *update_versions;
+    struct rrc_version *update_versions;
     /* The current version. */
-    int current_version;
+    struct rrc_version current_version;
     /* Amount of files to delete. */
     int num_deleted_files;
     /* Files to delete. */
@@ -51,13 +52,13 @@ struct rrc_update_state
     E.g., 4.2.0 = 420
     SD driver must be loaded for this to work.
 */
-struct rrc_result rrc_update_get_current_version(int *version);
+struct rrc_result rrc_update_get_current_version(struct rrc_version *version);
 
 /*
     Writes the specified version int into version.txt.
     SD driver must be loaded for this to work.
 */
-struct rrc_result rrc_update_set_current_version(int version);
+struct rrc_result rrc_update_set_current_version(struct rrc_version *version);
 
 /*
     Downloads a Retro Rewind ZIP. Uses the console to display progress.

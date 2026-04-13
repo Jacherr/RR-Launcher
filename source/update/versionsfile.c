@@ -31,56 +31,6 @@
 // max array size
 #define _RRC_SPLIT_LIM 4096
 
-struct rrc_result rrc_versionsfile_parse_verstring(char *verstring, int *version)
-{
-    /* major, minor, revision */
-    int parts[3] = {0, 0, 0};
-    int current = 0, started_at = 0;
-    int len = strlen(verstring);
-    for (int i = 0; i < len + 1; i++)
-    {
-        /* read until . or EOF, then extract that section */
-        if (verstring[i] == '.' || verstring[i] == '\0')
-        {
-            int sect_len = i - started_at;
-            if (sect_len == 0)
-            {
-                /* ??? */
-                return rrc_result_create_error_corrupted_versionfile("Invalid format");
-            }
-
-            /* read this section */
-            char section[sect_len + 1];
-            int idx = 0;
-            for (int j = started_at; j < started_at + sect_len; j++)
-            {
-                section[idx] = verstring[j];
-                idx++;
-            }
-            section[sect_len] = '\0';
-
-            int section_l = strtol(section, NULL, 10);
-            parts[current] = section_l;
-            current++;
-            if (current > 2)
-            {
-                /* we read the rev now */
-                break;
-            }
-
-            started_at = i + 1;
-        }
-    }
-
-    int final = 0;
-    final += (parts[0] * 100);
-    final += (parts[1] * 10);
-    final += parts[2];
-
-    *version = final;
-    return rrc_result_success;
-}
-
 struct ptr_len_pair
 {
     int len;
@@ -266,7 +216,7 @@ void rrc_versionsfile_free_split(char **array, int count)
     free(array);
 }
 
-struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *versionsfile, int current_version, int *uamt, char ***urls, int **versions)
+struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *versionsfile, struct rrc_version *current_version, int *uamt, char ***urls, struct rrc_version **versions)
 {
     /*
         We need to read the file line-wise and also space-wise.
@@ -280,7 +230,7 @@ struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *version
         we parse the url associated with it and add it to the list of updates.
     */
     *urls = malloc(_RRC_SPLIT_LIM);
-    *versions = malloc(_RRC_SPLIT_LIM);
+    *versions = malloc(_RRC_SPLIT_LIM * sizeof(struct rrc_version));
 
     char **lines;
     int count;
@@ -313,8 +263,8 @@ struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *version
             return rrc_result_create_error_corrupted_versionfile("Failed to split versionfile");
         }
 
-        int verint;
-        struct rrc_result verstring_res = rrc_versionsfile_parse_verstring(parts[0], &verint);
+        struct rrc_version verint;
+        struct rrc_result verstring_res = rrc_version_from_string(parts[0], &verint);
 
         if (rrc_result_is_error(verstring_res))
         {
@@ -322,7 +272,8 @@ struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *version
             return verstring_res;
         }
 
-        if (verint > current_version)
+        // if the version is newer than our current version, we need to update to it
+        if (rrc_version_is_older(current_version, &verint))
         {
             (*versions)[update_idx] = verint;
             (*urls)[update_idx] = parts[1];
@@ -348,7 +299,7 @@ struct rrc_result rrc_versionsfile_get_necessary_urls_and_versions(char *version
     return rrc_result_success;
 }
 
-struct rrc_result rrc_versionsfile_parse_deleted_files(char *input, int current_version, struct rrc_versionsfile_deleted_file **output, int *amt)
+struct rrc_result rrc_versionsfile_parse_deleted_files(char *input, struct rrc_version *current_version, struct rrc_versionsfile_deleted_file **output, int *amt)
 {
     *output = malloc(sizeof(struct rrc_versionsfile_deleted_file) * _RRC_SPLIT_LIM);
     int output_idx = 0;
@@ -376,8 +327,8 @@ struct rrc_result rrc_versionsfile_parse_deleted_files(char *input, int current_
             return rrc_result_create_error_corrupted_versionfile("Failed to split deleted versionfile");
         }
 
-        int verint;
-        struct rrc_result verstring_res = rrc_versionsfile_parse_verstring(parts[0], &verint);
+        struct rrc_version verint;
+        struct rrc_result verstring_res = rrc_version_from_string(parts[0], &verint);
 
         if (rrc_result_is_error(verstring_res))
         {
@@ -385,7 +336,7 @@ struct rrc_result rrc_versionsfile_parse_deleted_files(char *input, int current_
             return verstring_res;
         }
 
-        if (verint > current_version)
+        if (rrc_version_is_older(&verint, current_version))
         {
             struct rrc_versionsfile_deleted_file file = {
                 .version = verint,
