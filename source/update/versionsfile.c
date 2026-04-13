@@ -336,7 +336,7 @@ struct rrc_result rrc_versionsfile_parse_deleted_files(char *input, struct rrc_v
             return verstring_res;
         }
 
-        if (rrc_version_is_older(&verint, current_version))
+        if (rrc_version_is_older(current_version, &verint))
         {
             struct rrc_versionsfile_deleted_file file = {
                 .version = verint,
