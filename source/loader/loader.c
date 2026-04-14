@@ -230,9 +230,6 @@ void rrc_loader_load(struct rrc_dol *dol, struct rrc_settingsfile *settings, voi
         break;
     }
 
-    // We are loaded fdrom RRC so set this
-    bitflags |= RRC_BITFLAGS_LOADED_FROM_RR;
-
     *(u8 *)RRC_RR_BITFLAGS = bitflags;
     rrc_invalidate_cache((void *)RRC_SIGNATURE_ADDRESS, 5);
 
