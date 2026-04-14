@@ -25,11 +25,12 @@
 #include "update/update.h"
 #include "console.h"
 #include "util.h"
+#include "version.h"
 
 /* 100 = 100% */
 int rrc_con_progress_percent = 0;
 char *rrc_con_current_action;
-int cached_version = -1;
+struct rrc_version cached_version = {-1, -1, -1};
 
 int rrc_con_get_cols()
 {
@@ -88,14 +89,14 @@ int rrc_con_centered_text_start_column(char *text)
 
 void rrc_con_display_version()
 {
-    if (cached_version == -1)
+    if (cached_version.major == -1)
     {
         struct rrc_result version_result = rrc_update_get_current_version(&cached_version);
         rrc_result_error_check_error_fatal(version_result);
     }
 
     char vertext[32];
-    snprintf(vertext, 32, "Version: %i.%i.%i", cached_version / 100, (cached_version / 10) % 10, cached_version % 10);
+    snprintf(vertext, 32, "Version: %i.%i.%i", cached_version.major, cached_version.minor, cached_version.patch);
     rrc_con_cursor_seek_to(rrc_con_get_rows() - 2, rrc_con_get_cols() - strlen(vertext));
     printf("%s", vertext);
 }

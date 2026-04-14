@@ -34,10 +34,11 @@
 #include "../time.h"
 #include "../prompt.h"
 #include "../shutdown.h"
+#include "../version.h"
 
 #define _RRC_UPDATE_ZIP_NAME "update.zip"
 
-struct rrc_result rrc_update_get_current_version(int *version)
+struct rrc_result rrc_update_get_current_version(struct rrc_version *version)
 {
     FILE *file = fopen(RRC_VERSIONFILE, "r");
     if (file == NULL)
@@ -68,18 +69,17 @@ struct rrc_result rrc_update_get_current_version(int *version)
     /* add null termination */
     verstring[sz] = '\0';
 
-    return rrc_versionsfile_parse_verstring(verstring, version);
+    return rrc_version_from_string(verstring, version);
 }
 
-struct rrc_result rrc_update_set_current_version(int version)
+struct rrc_result rrc_update_set_current_version(struct rrc_version *version)
 {
-    int p1 = version / 100;
-    version %= 100;
-    int p2 = version / 10;
-    version %= 10;
+    int p1 = version->major;
+    int p2 = version->minor;
+    int p3 = version->patch;
 
     char out[32];
-    int written = snprintf(out, sizeof(out), "%d.%d.%d", p1, p2, version);
+    int written = snprintf(out, sizeof(out), "%d.%d.%d", p1, p2, p3);
     RRC_ASSERT(written < sizeof(out), "version string too long");
     FILE *file = fopen(RRC_VERSIONFILE, "w");
     if (file == NULL)
@@ -446,7 +446,7 @@ struct rrc_result rrc_update_do_updates_with_state(struct rrc_update_state *stat
         for (int i = 0; i < state->num_deleted_files; i++)
         {
             struct rrc_versionsfile_deleted_file *file = &state->deleted_files[i];
-            if (file->version == state->update_versions[state->current_update_num])
+            if (rrc_version_equals(&file->version, &state->update_versions[state->current_update_num]))
             {
                 char out[100];
                 snprintf(out, 100, "Removing deleted file %s\n", file->path);
@@ -460,7 +460,7 @@ struct rrc_result rrc_update_do_updates_with_state(struct rrc_update_state *stat
         }
 
         // Update the version.txt file
-        TRY(rrc_update_set_current_version(state->update_versions[state->current_update_num]));
+        TRY(rrc_update_set_current_version(&state->update_versions[state->current_update_num]));
 
         state->current_update_num++;
     }
@@ -485,7 +485,8 @@ struct rrc_result rrc_update_do_updates(void *xfb, int *count, bool *updates_ins
     int num_deleted_files = 0;
     struct rrc_versionsfile_deleted_file *deleted_files = NULL;
     char **zip_urls = NULL;
-    int *update_versions = NULL;
+    // Packed array of version (non-pointer)
+    struct rrc_version *update_versions = NULL;
     rrc_con_update("Get Versions", 10);
     res = rrc_versionsfile_get_versionsfile(&versionsfile);
     if (res < 0)
@@ -493,14 +494,14 @@ struct rrc_result rrc_update_do_updates(void *xfb, int *count, bool *updates_ins
         return rrc_result_create_error_curl(-res, "Failed to get version information.");
     }
 
-    int current;
+    struct rrc_version current = {-1, -1, -1};
     TRY(rrc_update_get_current_version(&current));
 
-    RRC_ASSERT(current >= 0, "failed to read current version file");
-    rrc_dbg_printf("Current version: %i\n", current);
+    RRC_ASSERT(current.major >= 0, "failed to read current version file");
+    rrc_dbg_printf("Current version: %i.%i.%i\n", current.major, current.minor, current.patch);
 
     rrc_con_update("Get Download URLs", 20);
-    TRY(rrc_versionsfile_get_necessary_urls_and_versions(versionsfile, current, count, &zip_urls, &update_versions));
+    TRY(rrc_versionsfile_get_necessary_urls_and_versions(versionsfile, &current, count, &zip_urls, &update_versions));
 
     if (*count > 0)
     {
@@ -520,7 +521,7 @@ struct rrc_result rrc_update_do_updates(void *xfb, int *count, bool *updates_ins
         RRC_FATAL("couldnt get files to remove! res: %i\n", res);
     }
 
-    TRY(rrc_versionsfile_parse_deleted_files(deleted_versionsfile, current, &deleted_files, &num_deleted_files));
+    TRY(rrc_versionsfile_parse_deleted_files(deleted_versionsfile, &current, &deleted_files, &num_deleted_files));
 
     rrc_dbg_printf("%i updates\n", *count);
     struct rrc_update_state state =
