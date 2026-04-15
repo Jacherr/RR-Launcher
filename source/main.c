@@ -207,9 +207,8 @@ int main(int argc, char **argv)
             "It may be possible to fix this by recreating the file.",
             "Recreate now?",
         };
-        rrc_result_free(settingsfile_res);
-
         enum rrc_prompt_result prompt_res = rrc_prompt_yes_no(xfb, lines, 4);
+        rrc_result_free(settingsfile_res);
 
         if (prompt_res == RRC_PROMPT_RESULT_YES)
         {
