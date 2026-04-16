@@ -302,11 +302,11 @@ struct rrc_result rrc_update_extract_zip_archive()
         unsigned long sd_free;
         TRY(rrc_sd_get_free_space(&sd_free));
 
-        if (stat.size > sd_free)
+        if (stat.size > sd_free || true) // testing: always check for space to test error handling
         {
             // Report sizes
             char msg[200];
-            snprintf(msg, 200, "Not enough free space on SD card for update. Needed: %llu bytes, available: %lu bytes", stat.size, sd_free);
+            snprintf(msg, 200, "Not enough free space on SD card for update.\n(Need %llu bytes, have %llu bytes)", (u64)stat.size, (u64)sd_free);
             return rrc_result_create_error_misc_update(msg);
         }
 
@@ -424,11 +424,11 @@ struct rrc_result rrc_update_do_updates_with_state(struct rrc_update_state *stat
         unsigned long sd_free;
         TRY(rrc_sd_get_free_space(&sd_free));
 
-        if (zipsz > sd_free)
+        if (zipsz > sd_free || true)
         {
             // Report sizes
             char msg[200];
-            snprintf(msg, 200, "Not enough free space on SD card for update. Needed: %lu bytes, available: %lu bytes", (unsigned long)zipsz, sd_free);
+            snprintf(msg, 200, "Not enough free space on SD card for update.\n(Need %llu bytes, have %llu bytes)", (u64)zipsz, (u64)sd_free);
             return rrc_result_create_error_misc_update(msg);
         }
 
