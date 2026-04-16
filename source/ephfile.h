@@ -1,5 +1,5 @@
 /*
-    crash.h - crash handler when the main game throws an exception
+    ephfile.h - Routines for handling of ephemeral files
 
     Copyright (C) 2025  Retro Rewind Team
 
@@ -17,25 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef RRC_CRASH_H
-#define RRC_CRASH_H
+#ifndef RRC_EPHFILE_H
+#define RRC_EPHFILE_H
 
-#include "settingsfile.h"
+#define RRC_LAUNCHED_FROM_RR_FILE_PATH "/RetroRewindChannel/.lfrr"
 
-#define RRC_CRASH_FILE_PATH "/RetroRewindChannel/.crash"
-
-/* 
-    Run the post-crash handler.
-    Prompts the user about the crash and asks them if they want to upload
-    RetroRewind6/Crash.pul to the servers (if any such file exists).
-    Then clears the flag and returns.
-*/
-void rrc_crash_handle(void *xfb, struct rrc_settingsfile *settings);
-
-/*
-    Checks for the necessary ephemeral file that indicates whether we were launched after a crash.
-    If it exists, deletes it and returns true. Otherwise, returns false.
-*/
-bool rrc_launched_after_crash();
+bool rrc_launched_from_rr();
 
 #endif

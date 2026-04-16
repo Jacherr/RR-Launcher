@@ -53,6 +53,7 @@
 #include "sd.h"
 #include "pad.h"
 #include "crash.h"
+#include "ephfile.h"
 
 /* 100ms */
 #define DISKCHECK_DELAY 100000

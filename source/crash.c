@@ -67,3 +67,15 @@ void rrc_crash_handle(void *xfb, struct rrc_settingsfile *settings)
         rrc_prompt_1_option(xfb, lines2, 11, "OK");
     }
 }
+
+bool rrc_launched_after_crash()
+{
+    FILE *f = fopen(RRC_CRASH_FILE_PATH, "r");
+    if (f)
+    {
+        fclose(f);
+        remove(RRC_CRASH_FILE_PATH);
+        return true;
+    }
+    return false;
+}
