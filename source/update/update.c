@@ -277,6 +277,35 @@ struct rrc_result rrc_update_extract_zip_archive()
     }
 
     u32 zip_entries = zip_get_num_entries(archive, 0);
+    // Find the total uncompressed size of the archive
+    u64 uncompressed_zipsz = 0;
+    for (int i = 0; i < zip_entries; i++)
+    {
+        zip_stat_t stat;
+        zip_stat_init(&stat);
+
+        int err = zip_stat_index(archive, i, 0, &stat);
+        if (err != 0)
+        {
+            return rrc_result_create_error_zip(err, "Failed to stat file in archive");
+        }
+
+        if(stat.valid & ZIP_STAT_SIZE)
+        {
+            uncompressed_zipsz += stat.size;
+        }
+    }
+
+    unsigned long sd_free;
+    TRY(rrc_sd_get_free_space(&sd_free));
+
+    if(uncompressed_zipsz > sd_free)
+    {
+        // Report sizes
+        char msg[200];
+        snprintf(msg, 200, "Not enough free space on SD card to extract update.\n(Need %llu bytes, have %llu bytes)", (u64)uncompressed_zipsz, (u64)sd_free);
+        return rrc_result_create_error_misc_update(msg);
+    }
 
     char buf[4096];
 
@@ -299,14 +328,11 @@ struct rrc_result rrc_update_extract_zip_archive()
             return rrc_result_create_error_misc_update("Empty file name in ZIP archive");
         }
 
-        unsigned long sd_free;
-        TRY(rrc_sd_get_free_space(&sd_free));
-
-        if (stat.size > sd_free || true) // testing: always check for space to test error handling
+        if (stat.size > sd_free) // testing: always check for space to test error handling
         {
             // Report sizes
             char msg[200];
-            snprintf(msg, 200, "Not enough free space on SD card for update.\n(Need %llu bytes, have %llu bytes)", (u64)stat.size, (u64)sd_free);
+            snprintf(msg, 200, "Not enough free space on SD card to extract file.\n(Need %llu bytes, have %llu bytes)", (u64)stat.size, (u64)sd_free);
             return rrc_result_create_error_misc_update(msg);
         }
 
@@ -424,11 +450,11 @@ struct rrc_result rrc_update_do_updates_with_state(struct rrc_update_state *stat
         unsigned long sd_free;
         TRY(rrc_sd_get_free_space(&sd_free));
 
-        if (zipsz > sd_free || true)
+        if (zipsz > sd_free)
         {
             // Report sizes
             char msg[200];
-            snprintf(msg, 200, "Not enough free space on SD card for update.\n(Need %llu bytes, have %llu bytes)", (u64)zipsz, (u64)sd_free);
+            snprintf(msg, 200, "Not enough free space on SD card to save ZIP.\n(Need %llu bytes, have %llu bytes)", (u64)zipsz, (u64)sd_free);
             return rrc_result_create_error_misc_update(msg);
         }
 
