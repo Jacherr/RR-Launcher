@@ -328,18 +328,6 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
                 break;
             }
 
-            bool looking_for_patches = strstr1(filename, "patches") != NULL;
-
-            if (looking_for_patches)
-            {
-                OS_Report("\n\n\n\nFolder contents count: %d (external path: %s, disc path: %s, filename: %s)\n", replacement->folder_contents_count, replacement->external, disc_path, filename);
-                for (int i = 0; i < replacement->folder_contents_count; i++)
-                {
-                    OS_Report(" - %s\n", replacement->folder_contents[i]);
-                }
-                OS_Report("\n\n\n\n");
-            }
-
             // Check if this folder path is a prefix of the given filename (`matches`),
             // and if it is, find the "split" point at which they differ (`differ_index`). Example:
             // Game requests "Assets/RaceAssets.szs", folder replacement is "/Assets" -> "/CustomAssets".
