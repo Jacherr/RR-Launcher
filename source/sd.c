@@ -65,7 +65,7 @@ struct rrc_result rrc_sd_init()
     rewind(file);
     
     // Read the file and parse the version to check the write worked
-    char buf[5] = {0};
+    char buf[6] = {0};
     if (fread(buf, 1, 5, file) <= 0)
     {   
         fclose(file);
