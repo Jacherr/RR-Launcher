@@ -377,15 +377,15 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
                 strncpy(path_ptr, filename + differ_index, 64 - ((u32)path_ptr - (u32)new_path));
 
                 RTE_DBG("Checking for folder replacement path '%s' (external_path='%s', filename='%s', disc_path='%s')\n", new_path, external_path, filename, disc_path);
-                // Let's extract the filename from the path and see if exists in replacement->folder_contents.
-                char *new_path_filename = strrchr(new_path, '/');
-                if (new_path_filename)
+
+                // `path_ptr` (and `new_path_filename`) now points right after the common prefix (so usually the filename),
+                // which we will use to check against the folder contents.
+                // But first, there might be a `/` here still for e.g. `disc=/b requested=/b/c`:
+                // new_path_filename` will point at `/c` (differ_index=2), but we only want `c`, so skip it.
+                char *new_path_filename = path_ptr;
+                if (*new_path_filename == '/')
                 {
                     new_path_filename++;
-                }
-                else
-                {
-                    new_path_filename = new_path;
                 }
 
                 bool cached_file_exists = false;
@@ -451,7 +451,7 @@ static void rte_dvd_open_entry_num(s32 entry_num, FileInfo *file_info)
 
         if (fd == -1)
         {
-            RTE_FATAL("FastOpen: SD error!");
+            RTE_FATAL("FastOpen: SD error (%d)!\n", errno);
         }
 
         if (fd != (u32)file)
