@@ -111,6 +111,18 @@ int est_sec_remaining = 0;
 int last_10_sec_dl_amount[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 int next_second_write_index = 0;
 
+void _rrc_cleanup_measurement_state()
+{
+    lp = -1;
+    last_measurement_from = -1;
+    last_dlnow = 0;
+    dl_speed_avg = 0;
+    est_sec_remaining = 0;
+    for(int i = 0; i < 10; i++)
+        last_10_sec_dl_amount[i] = -1;
+    next_second_write_index = 0;
+}
+
 void _rrc_zipdl_est_time_remaining_fmt(int est_sec_remaining, char* out, int out_sz)
 {
     if (est_sec_remaining < 60)
@@ -170,6 +182,8 @@ int _rrc_zipdl_progress_callback(int *numinfo,
             next_second_write_index = 0;
 
         dl_speed_avg = dl_speed_sum / 10;
+        if(dl_speed_avg == 0)
+            dl_speed_avg = 1; // Avoid division by zero
         est_sec_remaining = remaining_dl / dl_speed_avg;
     }
 
@@ -270,14 +284,18 @@ struct rrc_result rrc_update_download_zip(char *url, char *filename, int current
 
             fclose(fp);
             curl_easy_cleanup(curl);
+            _rrc_cleanup_measurement_state();
             return rrc_result_create_error_curl(cres, "Failed to download update ZIP");
         }
 
         fclose(fp);
         curl_easy_cleanup(curl);
+        _rrc_cleanup_measurement_state();
+
         return rrc_result_success;
     }
 
+    _rrc_cleanup_measurement_state();
     return rrc_result_create_error_curl(CURLE_FAILED_INIT, "Failed to init curl");
 }
 
