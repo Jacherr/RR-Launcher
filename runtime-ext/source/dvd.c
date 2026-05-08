@@ -413,7 +413,7 @@ static bool rte_dvd_resolve_path_to_entry_num(const char *filename, s32 *entry_n
                 }
                 else
                 {
-                    OS_Report("NOTE: %s/%s not applied because it doesn't exist.\n", external_path, new_path_filename);
+                    RTE_DBG("NOTE: %s/%s not applied because it doesn't exist.\n", external_path, new_path_filename);
                 }
             }
 
