@@ -51,4 +51,6 @@ u32 align_up(u32 num, u32 align_as);
 
 void to_lowercase(char *str);
 
+int strcicmp(const char *a, const char *b);
+
 #endif
