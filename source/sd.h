@@ -22,7 +22,7 @@
 
 #include "result.h"
 
-#define RRC_SD_TEST_FILE ".sdtest"
+#define RRC_SD_TEST_FILE "/RetroRewindChannel/.sdtest"
 
 /*
     Initialises and tests the SD card slot.
@@ -48,9 +48,8 @@ bool rrc_sd_folder_exists(const char *path);
  */
 int rrc_sd_get_folder_file_count(const char *path, struct rrc_result *out_err);
 
-/**
-    Returns the amount of free space on the sd card in bytes.
+/*
+    Returns amount of free space on sd card as bytes.
 */
-struct rrc_result rrc_sd_get_free_space(unsigned long *res);
-
+struct rrc_result rrc_sd_get_free_space(unsigned long long *res);
 #endif
