@@ -26,6 +26,7 @@ GAME_DOL_LOADER := game_dol_loader
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 RELEASE     := $(BUILD)/release
+EXTRA_CFLAGS ?=
 SOURCES		:=	source source/update source/pngu source/loader
 DATA		:=  data
 TEXTURES	:=	textures
@@ -38,11 +39,11 @@ INCLUDES	:=
 # Find the length of the `patch_dol` function in $(GAME_DOL_LOADER).c and expose it as a macro, which is needed because we memcpy() it.
 PATCH_DOL_LEN = 0x$(shell $(DEVKITPPC)/bin/powerpc-eabi-objdump $(GAME_DOL_LOADER).o -t | grep ' patch_dol' | awk '{print $$5}')
 
-CFLAGS		=	-DPATCH_DOL_LEN=$(PATCH_DOL_LEN) -fno-builtin -g -O2 -Wall $(MACHDEP) $(INCLUDE)
-CXXFLAGS	=	$(CFLAGS)
+CFLAGS		= 	$(EXTRA_CFLAGS) -DPATCH_DOL_LEN=$(PATCH_DOL_LEN) -fno-builtin -g -O2 -Wall $(MACHDEP) $(INCLUDE)
+CXXFLAGS	= 	$(CFLAGS)
 
 # compiler flags for the special $(GAME_DOL_LOADER).c file
-GAME_DOL_LOADER_CFLAGS = -O2 -fno-builtin -Wall -g $(MACHDEP) $(INCLUDE)
+GAME_DOL_LOADER_CFLAGS = $(EXTRA_CFLAGS) -O2 -fno-builtin -Wall -g $(MACHDEP) $(INCLUDE)
 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
@@ -116,15 +117,28 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
 					-L$(LIBOGC_LIB)
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) clean
+.PHONY: $(BUILD) build debug beta beta-package clean release run
 
 #---------------------------------------------------------------------------------
 $(BUILD):
-	make --no-print-directory -C runtime-ext
+	make --no-print-directory -C runtime-ext EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
+debug: EXTRA_CFLAGS := -DDEBUG
+debug: $(BUILD)
+
+beta: EXTRA_CFLAGS := -DBETA
+beta: $(BUILD) beta-package
+
+beta-package:
+	# Move files to a beta staging directory instead of the release directory
+	mkdir -p $(BUILD)/beta/RetroRewindChannel
+	mkdir -p $(BUILD)/beta/apps/RetroRewind
+	cp runtime-ext/runtime-ext-* $(BUILD)/beta/RetroRewindChannel
+	cp $(OUTPUT).dol $(BUILD)/beta/apps/RetroRewind/boot.dol
+
 clean:
 	@echo clean ...
 	make --no-print-directory -C runtime-ext clean
