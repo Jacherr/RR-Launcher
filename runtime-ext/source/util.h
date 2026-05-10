@@ -25,12 +25,10 @@
 void OS_Report(const char *, ...);
 void OS_Fatal(u32 *, u32 *, const char *);
 
-#ifndef DEBUG
-#define RTE_DBG(...)
-#endif
-
-#ifdef DEBUG
-#define RTE_DBG OS_Report
+#if (defined(RRC_DEBUG) && RRC_DEBUG >= 1) || (defined(RRC_BETA) && RRC_BETA >= 1)
+#   define RTE_DBG OS_Report
+#else
+#   define RTE_DBG(...)
 #endif
 
 #define RTE_FATAL(...)                           \

@@ -31,7 +31,12 @@
     When this directive is defined and set to a value greater than 0,
     debug logging and some additional assertions are enabled.
 */
-#define DEBUG 1
+#if defined(RRC_BETA) && RRC_BETA >= 1
+// beta implies debug
+#define RRC_DEBUG 1
+#elif !defined(RRC_DEBUG)
+#define RRC_DEBUG 0
+#endif
 
 #define _RRC_STRING(s) #s
 
@@ -77,7 +82,7 @@
 
 #define RRC_STRINGIFY(x) #x
 
-#if defined(DEBUG) && DEBUG >= 0
+#if defined(RRC_DEBUG) && RRC_DEBUG >= 1
 /* define debug macros */
 
 #define rrc_dbg_printf(...)                                        \

@@ -39,7 +39,7 @@ INCLUDES	:=
 # Find the length of the `patch_dol` function in $(GAME_DOL_LOADER).c and expose it as a macro, which is needed because we memcpy() it.
 PATCH_DOL_LEN = 0x$(shell $(DEVKITPPC)/bin/powerpc-eabi-objdump $(GAME_DOL_LOADER).o -t | grep ' patch_dol' | awk '{print $$5}')
 
-CFLAGS		= 	$(EXTRA_CFLAGS) -DPATCH_DOL_LEN=$(PATCH_DOL_LEN) -fno-builtin -g -O2 -Wall $(MACHDEP) $(INCLUDE)
+CFLAGS		= 	-DPATCH_DOL_LEN=$(PATCH_DOL_LEN) $(EXTRA_CFLAGS) -fno-builtin -g -O2 -Wall $(MACHDEP) $(INCLUDE)
 CXXFLAGS	= 	$(CFLAGS)
 
 # compiler flags for the special $(GAME_DOL_LOADER).c file
@@ -126,10 +126,19 @@ $(BUILD):
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
-debug: EXTRA_CFLAGS := -DDEBUG
-debug: $(BUILD)
+debug: EXTRA_CFLAGS := -DRRC_DEBUG=1
+debug: export EXTRA_CFLAGS := -DRRC_DEBUG=1
+debug: $(BUILD) debug-package
 
-beta: EXTRA_CFLAGS := -DBETA
+debug-package:
+	# Move files to a debug staging directory instead of the release directory
+	mkdir -p $(BUILD)/debug/RetroRewindChannel
+	mkdir -p $(BUILD)/debug/apps/RetroRewind
+	cp runtime-ext/runtime-ext-* $(BUILD)/debug/RetroRewindChannel
+	cp $(OUTPUT).dol $(BUILD)/debug/apps/RetroRewind/boot.dol
+
+beta: EXTRA_CFLAGS := -DRRC_BETA=1
+beta: export EXTRA_CFLAGS := -DRRC_BETA=1
 beta: $(BUILD) beta-package
 
 beta-package:

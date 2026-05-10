@@ -36,10 +36,12 @@ LDFLAGS := $(OFILES) $(MACHDEP) -Wl,--section-start=.init=81744260,--section-sta
 
 all: $(DOLS)
 
-debug: EXTRA_CFLAGS := -DDEBUG
+debug: EXTRA_CFLAGS := -DDEBUG=1
+debug: export EXTRA_CFLAGS := -DDEBUG=1
 debug: all
 
-beta: EXTRA_CFLAGS := -DBETA
+beta: EXTRA_CFLAGS := -DRRC_BETA=1
+beta: export EXTRA_CFLAGS := -DRRC_BETA=1
 beta: all
 
 runtime-ext-%.dol: $(ELFS)

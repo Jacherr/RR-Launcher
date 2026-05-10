@@ -58,6 +58,10 @@
 /* 100ms */
 #define DISKCHECK_DELAY 100000
 
+// When debug is disabled, some variables become unused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
 int main(int argc, char **argv)
 {
     // There are bugs in pulsar with USB/HIDv5 if the IOS version is 59, which HBC commonly boots programs with.
@@ -359,9 +363,12 @@ interrupt_loop_end:
     WPAD_Shutdown();
 
     s64 systime_end = gettime();
+
     rrc_dbg_printf("time taken: %.3f seconds\n", ((f64)diff_msec(systime_start, systime_end)) / 1000.0);
 
     rrc_loader_load(dol, &stored_settings, bi2, mem1_hi, mem2_hi, region);
 
     return 0;
 }
+
+#pragma GCC diagnostic pop
