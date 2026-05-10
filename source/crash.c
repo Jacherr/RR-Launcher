@@ -18,6 +18,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <dir.h>
 #include "crash.h"
 #include "console.h"
 #include "prompt.h"
@@ -59,7 +60,7 @@ void rrc_crash_handle(void *xfb, struct rrc_settingsfile *settings)
             "instructions found on https://rwfc.net/downloads,",
             "and do not manually delete any files.",
             "",
-            "A crash file was written to sd:/RetroRewind6/Crash.pul.",
+            "A crash file was written to sd:/" RRC_RETRO_REWIND_BASE_DIR "/Crash.pul.",
             "If you continue to experience issues, please report it",
             "along with this file to our Discord server:",
             "https://discord.gg/retrorewind",

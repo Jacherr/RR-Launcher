@@ -143,10 +143,10 @@ beta: $(BUILD) beta-package
 
 beta-package:
 	# Move files to a beta staging directory instead of the release directory
-	mkdir -p $(BUILD)/beta/RetroRewindChannel
-	mkdir -p $(BUILD)/beta/apps/RetroRewind
-	cp runtime-ext/runtime-ext-* $(BUILD)/beta/RetroRewindChannel
-	cp $(OUTPUT).dol $(BUILD)/beta/apps/RetroRewind/boot.dol
+	mkdir -p $(BUILD)/beta/RetroRewindChannelBeta
+	mkdir -p $(BUILD)/beta/apps/RetroRewindBeta
+	cp runtime-ext/runtime-ext-* $(BUILD)/beta/RetroRewindChannelBeta
+	cp $(OUTPUT).dol $(BUILD)/beta/apps/RetroRewindBeta/boot.dol
 
 clean:
 	@echo clean ...

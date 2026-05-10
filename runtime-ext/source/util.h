@@ -29,6 +29,7 @@ void OS_Fatal(u32 *, u32 *, const char *);
 #   define RTE_DBG OS_Report
 #else
 #   define RTE_DBG(...)
+#   error "RRC_DEBUG or RRC_BETA not defined"
 #endif
 
 #define RTE_FATAL(...)                           \

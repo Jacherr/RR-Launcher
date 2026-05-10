@@ -19,12 +19,13 @@
 #ifndef RRC_UPDATE_H
 #define RRC_UPDATE_H
 
+#include <dir.h>
 #include <curl/curl.h>
 #include "../result.h"
 #include "../version.h"
 
 #define RRC_UPDATE_LARGE_THRESHOLD (long)(1000 * 1000 * 100) /* 100MB */
-#define RRC_VERSIONFILE "RetroRewind6/version.txt"
+#define RRC_VERSIONFILE "/" RRC_RETRO_REWIND_BASE_DIR "/version.txt"
 
 /* Holds all info related to an update or sequence of updates */
 struct rrc_update_state

@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 
     bool first_open = false;
 
-    FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "r");
+    FILE *afd = fopen("sd:/" RRC_RETRO_REWIND_CHANNEL_DIR "/accept.txt", "r");
     if (afd == NULL)
     {
         char *lines[] = {
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
             rrc_result_error_check_error_normal(err, xfb);
         }
 
-        FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "w");
+        FILE *afd = fopen("sd:/" RRC_RETRO_REWIND_CHANNEL_DIR "/accept.txt", "w");
         if (afd == NULL)
         {
             struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to create acceptance file. The SD card may be write locked.");

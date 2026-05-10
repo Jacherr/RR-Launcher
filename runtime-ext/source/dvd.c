@@ -32,6 +32,7 @@
 #include "trampoline.h"
 #include <string.h>
 #include <ctype.h>
+#include <dir.h>
 
 /**
  * Contains all <file> and <folder> replacements. Initialized in the launcher DOL based on the XML.
@@ -232,7 +233,7 @@ static bool rte_dvd_resolve_my_stuff_path_to_entry_num(const char *path, s32 *en
     char my_stuff_path[64];
     if (rrc_bitflags & (RRC_BITFLAGS_MY_STUFF_RR | RRC_BITFLAGS_MY_STUFF_RR_MUSIC))
     {
-        snprintf(my_stuff_path, sizeof(my_stuff_path), "/RetroRewind6/MyStuff/%s", filename);
+        snprintf(my_stuff_path, sizeof(my_stuff_path), "/" RRC_RETRO_REWIND_BASE_DIR "/MyStuff/%s", filename);
     }
     else
     {

@@ -20,9 +20,10 @@
 #ifndef RRC_RIIVO_H
 #define RRC_RIIVO_H
 
+#include <dir.h>
 #include "types.h"
 
-#define RRC_RIIVO_XML_PATH "RetroRewind6/xml/RetroRewind6.xml"
+#define RRC_RIIVO_XML_PATH "/" RRC_RETRO_REWIND_BASE_DIR "/xml/" RRC_RETRO_REWIND_BASE_DIR ".xml"
 
 enum rrc_riivo_disc_replacement_type
 {
