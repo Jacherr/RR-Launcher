@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 
     errno = 0;
 
-    DIR *dir = opendir("sd:/RetroRewindChannel");
+    DIR *dir = opendir("sd:/" RRC_RETRO_REWIND_CHANNEL_DIR);
     if (dir != NULL)
     {
         closedir(dir);
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     else
     {
         // ???
-        struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to open sd:/RetroRewindChannel");
+        struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to open sd:/" RRC_RETRO_REWIND_CHANNEL_DIR);
         rrc_result_error_check_error_fatal(err);
     }
 

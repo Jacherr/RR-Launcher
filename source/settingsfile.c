@@ -41,10 +41,11 @@
 #include <gctypes.h>
 #include <string.h>
 #include <errno.h>
+#include <dir.h>
 #include "settingsfile.h"
 #include "util.h"
 
-#define RRC_SETTINGSFILE_PATH "RetroRewindChannel/.settings"
+#define RRC_SETTINGSFILE_PATH "/" RRC_RETRO_REWIND_BASE_DIR "/.settings"
 #define RRC_SETTINGSFILE_MY_STUFF_KEY "My Stuff"
 #define RRC_SETTINGSFILE_SAVEGAME_KEY "Separate savegame"
 #define RRC_SETTINGSFILE_AUTOUPDATE_KEY "Auto update"

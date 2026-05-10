@@ -20,6 +20,8 @@
 #ifndef RRC_EPHFILE_H
 #define RRC_EPHFILE_H
 
+// Do not use the channel base dir constant here, as the game is unaware of this.
+// It will always write into the "main" folder. Since it's an ephemeral file, it doesn't really matter.
 #define RRC_LAUNCHED_FROM_RR_FILE_PATH "/RetroRewindChannel/.lfrr"
 
 bool rrc_launched_from_rr();
