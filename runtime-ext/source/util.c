@@ -19,6 +19,8 @@
 
 #include <types.h>
 #include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 
 u32 align_down(u32 num, u32 align_as)
 {
@@ -32,8 +34,27 @@ u32 align_up(u32 num, u32 align_as)
 
 void to_lowercase(char *str)
 {
-    for (int i = 0; str[i]; i++) {
+    for (int i = 0; str[i]; i++)
+    {
         // Cast to unsigned char to avoid undefined behaviour with non-ASCII chars
         str[i] = tolower((unsigned char)str[i]);
     }
+}
+
+int strcicmp(const char *a, const char *b)
+{
+    const unsigned char *p1 = (const unsigned char *)a;
+    const unsigned char *p2 = (const unsigned char *)b;
+    int result;
+
+    if (p1 == p2)
+        return 0;
+        
+    while ((result = tolower(*p1) - tolower(*p2++)) == 0)
+    {
+        if (*p1++ == '\0')
+            break;
+    }
+
+    return result;
 }
