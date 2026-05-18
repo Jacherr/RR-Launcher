@@ -171,6 +171,10 @@ const char **rrc_riivo_patch_loader_get_entries_in_replaced_folder(u32 *arena,
             continue; // No need to store this entry in any case as main.dol is never replaced at runtime.
         }
 
+        // Ignore AppleDouble metadata files.
+        if (entry->d_name[0] == '.' && entry->d_name[1] == '_')
+            continue;
+
         if (i >= cap)
         {
             cap *= 2;
