@@ -15,8 +15,11 @@ OFILES := $(addprefix build/,$(CFILES:.c=.o))
 # Prevent deletion of .o files, helps with incr rebuilds
 .SECONDARY: $(OFILES)
 
+.PHONY: all debug beta clean
+
 INCLUDE := -I../shared -Ivendor -Ivendor/bslug_include
-CFLAGS	:= -nostdlib -mno-eabi -O2 -Wall $(MACHDEP) $(INCLUDE)
+EXTRA_CFLAGS ?=
+CFLAGS	:= $(EXTRA_CFLAGS) -nostdlib -mno-eabi -O2 -Wall $(MACHDEP) $(INCLUDE)
 
 LINKERSCRIPTS := $(wildcard linker-*.ld)
 # get region characters
@@ -32,6 +35,14 @@ ELFS := $(addsuffix .elf, $(FILENAMES))
 LDFLAGS := $(OFILES) $(MACHDEP) -Wl,--section-start=.init=81744260,--section-start=.text=81744660,--section-start=.rodata=81782fe0
 
 all: $(DOLS)
+
+debug: EXTRA_CFLAGS := -DDEBUG=1
+debug: export EXTRA_CFLAGS := -DDEBUG=1
+debug: all
+
+beta: EXTRA_CFLAGS := -DRRC_BETA=1
+beta: export EXTRA_CFLAGS := -DRRC_BETA=1
+beta: all
 
 runtime-ext-%.dol: $(ELFS)
 	@echo runtime-ext-$*.elf

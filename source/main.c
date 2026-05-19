@@ -58,6 +58,10 @@
 /* 100ms */
 #define DISKCHECK_DELAY 100000
 
+// When debug is disabled, some variables become unused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
 int main(int argc, char **argv)
 {
     // There are bugs in pulsar with USB/HIDv5 if the IOS version is 59, which HBC commonly boots programs with.
@@ -90,7 +94,7 @@ int main(int argc, char **argv)
 
     errno = 0;
 
-    DIR *dir = opendir("sd:/RetroRewindChannel");
+    DIR *dir = opendir("sd:/" RRC_RETRO_REWIND_CHANNEL_DIR);
     if (dir != NULL)
     {
         closedir(dir);
@@ -98,7 +102,7 @@ int main(int argc, char **argv)
     else
     {
         // ???
-        struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to open sd:/RetroRewindChannel");
+        struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to open sd:/" RRC_RETRO_REWIND_CHANNEL_DIR);
         rrc_result_error_check_error_fatal(err);
     }
 
@@ -110,7 +114,7 @@ int main(int argc, char **argv)
 
     bool first_open = false;
 
-    FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "r");
+    FILE *afd = fopen("sd:/" RRC_RETRO_REWIND_CHANNEL_DIR "/accept.txt", "r");
     if (afd == NULL)
     {
         char *lines[] = {
@@ -138,7 +142,7 @@ int main(int argc, char **argv)
             rrc_result_error_check_error_normal(err, xfb);
         }
 
-        FILE *afd = fopen("sd:/RetroRewindChannel/accept.txt", "w");
+        FILE *afd = fopen("sd:/" RRC_RETRO_REWIND_CHANNEL_DIR "/accept.txt", "w");
         if (afd == NULL)
         {
             struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to create acceptance file. The SD card may be write locked.");
@@ -359,9 +363,12 @@ interrupt_loop_end:
     WPAD_Shutdown();
 
     s64 systime_end = gettime();
+
     rrc_dbg_printf("time taken: %.3f seconds\n", ((f64)diff_msec(systime_start, systime_end)) / 1000.0);
 
     rrc_loader_load(dol, &stored_settings, bi2, mem1_hi, mem2_hi, region);
 
     return 0;
 }
+
+#pragma GCC diagnostic pop

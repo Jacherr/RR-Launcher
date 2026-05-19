@@ -309,12 +309,12 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
         // All current My Stuff music options *do* have this attribute, so it's fine for them to use this (for now, anyway...).
         // When all is said and done, we MUST be left with only one folder replacement marked as My Stuff, if My Stuff is enabled.
         // If there are multiple, they will conflict.
-        bool is_rr_mystuff = strcmp(elem_id, "RRLoad") == 0;
-        bool is_ctgpr_mystuff = strcmp(elem_id, "RRCTGPLoad") == 0;
+        bool is_rr_mystuff = strcmp(elem_id, RRC_RR_MY_STUFF_PATCH_ID) == 0;
+        bool is_ctgpr_mystuff = strcmp(elem_id, RRC_CTGP_MY_STUFF_PATCH_ID) == 0;
 
         // Skip music if the My Stuff exclusive option for it is disabled.
-        bool is_rr_music = strcmp(elem_id, "RRLoadMusic") == 0;
-        bool is_ctgp_music = strcmp(elem_id, "RRCTGPLoadMusic") == 0;
+        bool is_rr_music = strcmp(elem_id, RRC_RR_MUSIC_MY_STUFF_PATCH_ID) == 0;
+        bool is_ctgp_music = strcmp(elem_id, RRC_CTGP_MUSIC_MY_STUFF_PATCH_ID) == 0;
 
         mxml_index_t *file_repl_index = mxmlIndexNew(cur, "file", NULL);
         for (mxml_node_t *file = mxmlIndexEnum(file_repl_index); file != NULL; file = mxmlIndexEnum(file_repl_index))
@@ -450,7 +450,7 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
             // where we barely only have access to a single function.
             if (valuefile_mxml != NULL)
             {
-                if (strcmp(valuefile_mxml, "/" RRC_LOADER_PUL_PATH) == 0)
+                if (strcmp(valuefile_mxml, RRC_LOADER_PUL_PATH) == 0)
                 {
                     // Loader.pul specifically is handled manually elsewhere, so make an exception for this.
                     u32 loader_addr = strtoul(addr_mxml, NULL, 16);
@@ -458,7 +458,10 @@ struct rrc_result rrc_riivo_patch_loader_parse(struct rrc_settingsfile *settings
                     continue;
                 }
 
-                return rrc_result_create_error_corrupted_rr_xml("Unhandled valuefile memory patch encountered");
+                char error[128];
+                snprintf(error, 128, "Unsupported valuefile '%s' in memory patch", valuefile_mxml);
+
+                return rrc_result_create_error_corrupted_rr_xml(error);
             }
 
             PARSE_REQUIRED_ATTR(memory, value_mxml, "value");

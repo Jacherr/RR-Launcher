@@ -96,7 +96,14 @@ void rrc_con_display_version()
     }
 
     char vertext[32];
-    snprintf(vertext, 32, "Version: %i.%i.%i", cached_version.major, cached_version.minor, cached_version.patch);
+
+    #if defined(RRC_BETA) && RRC_BETA >= 1
+        snprintf(vertext, 32, "Version: %i.%i.%i (RRBETA BUILD)", cached_version.major, cached_version.minor, cached_version.patch);   
+    #else
+        snprintf(vertext, 32, "Version: %i.%i.%i", cached_version.major, cached_version.minor, cached_version.patch);
+    #endif
+
+
     rrc_con_cursor_seek_to(rrc_con_get_rows() - 2, rrc_con_get_cols() - strlen(vertext));
     printf("%s", vertext);
 }

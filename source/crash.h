@@ -22,6 +22,8 @@
 
 #include "settingsfile.h"
 
+// Do not use the channel base dir constant here, as the game is unaware of this.
+// It will always write into the "main" folder. Since it's an ephemeral file, it doesn't really matter.
 #define RRC_CRASH_FILE_PATH "/RetroRewindChannel/.crash"
 
 /* 

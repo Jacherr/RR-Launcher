@@ -1,5 +1,5 @@
 /*
-    ephfile.h - Routines for handling of ephemeral files
+    dir.h - File base directory handling based on macros
 
     Copyright (C) 2025  Retro Rewind Team
 
@@ -17,13 +17,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef RRC_EPHFILE_H
-#define RRC_EPHFILE_H
+#ifndef RRC_DIR_H
+#define RRC_DIR_H
 
-// Do not use the channel base dir constant here, as the game is unaware of this.
-// It will always write into the "main" folder. Since it's an ephemeral file, it doesn't really matter.
-#define RRC_LAUNCHED_FROM_RR_FILE_PATH "/RetroRewindChannel/.lfrr"
-
-bool rrc_launched_from_rr();
+#if defined(RRC_BETA) && RRC_BETA >= 1
+#   define RRC_RETRO_REWIND_BASE_DIR "RRBeta"
+#   define RRC_RETRO_REWIND_CHANNEL_DIR "RetroRewindChannelBeta"
+#else
+#   define RRC_RETRO_REWIND_BASE_DIR "RetroRewind6" 
+#   define RRC_RETRO_REWIND_CHANNEL_DIR "RetroRewindChannel"
+#endif
 
 #endif

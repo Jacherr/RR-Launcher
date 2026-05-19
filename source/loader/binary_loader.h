@@ -21,14 +21,15 @@
 #define BINARY_LOADER_H
 
 #include <dol.h>
+#include <dir.h>
 #include "../result.h"
 
-#define RRC_LOADER_PUL_PATH "RetroRewind6/Binaries/Loader.pul"
+#define RRC_LOADER_PUL_PATH "/" RRC_RETRO_REWIND_BASE_DIR "/Binaries/Loader.pul"
 
 // We need to load the correct runtime-ext.
 // This is provided as a base; however, the region and file extension needs
 // to be appended at runtime.
-#define RRC_RUNTIME_EXT_BASE_PATH "RetroRewindChannel/runtime-ext"
+#define RRC_RUNTIME_EXT_BASE_PATH "/" RRC_RETRO_REWIND_CHANNEL_DIR "/runtime-ext"
 
 // At the moment this file handles Loader.pul and runtime-ext.
 
