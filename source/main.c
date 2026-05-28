@@ -94,18 +94,6 @@ int main(int argc, char **argv)
 
     errno = 0;
 
-    DIR *dir = opendir("sd:/" RRC_RETRO_REWIND_CHANNEL_DIR);
-    if (dir != NULL)
-    {
-        closedir(dir);
-    }
-    else
-    {
-        // ???
-        struct rrc_result err = rrc_result_create_error_errno(errno, "Failed to open sd:/" RRC_RETRO_REWIND_CHANNEL_DIR);
-        rrc_result_error_check_error_fatal(err);
-    }
-
     rrc_con_update("Initialise controllers", 0);
     res = PAD_Init();
     RRC_ASSERTEQ(res, 1, "PAD_Init");
@@ -128,8 +116,7 @@ int main(int argc, char **argv)
             "By continuing, you acknowledge that:",
             "1. The channel is in a beta and therefore unfinished state,",
             "2. The channel comes with NO WARRANTY, express or implied,",
-            "3. Taking a backup of your SD card is recommended."
-        };
+            "3. Taking a backup of your SD card is recommended."};
 
         enum rrc_prompt_result result = rrc_prompt_2_options(xfb, lines, 11, "I Accept", "Close Launcher", RRC_PROMPT_RESULT_OK, RRC_PROMPT_RESULT_CANCEL);
         if (result == RRC_PROMPT_RESULT_CANCEL)
@@ -137,7 +124,8 @@ int main(int argc, char **argv)
             exit(0);
         }
 
-        if(result == RRC_PROMPT_RESULT_ERROR) {
+        if (result == RRC_PROMPT_RESULT_ERROR)
+        {
             struct rrc_result err = rrc_result_create_error_errno(EIO, "Failed to display prompt");
             rrc_result_error_check_error_normal(err, xfb);
         }
@@ -196,7 +184,7 @@ int main(int argc, char **argv)
     }
 
     bool crashed = false;
-    if(rrc_launched_after_crash())
+    if (rrc_launched_after_crash())
     {
         crashed = true;
         rrc_crash_handle(xfb, &stored_settings);
@@ -254,13 +242,25 @@ int main(int argc, char **argv)
         int update_count;
         bool any_updates;
         struct rrc_result update_res = rrc_update_do_updates(xfb, &update_count, &any_updates);
-        rrc_result_error_check_error_normal(update_res, xfb);
+        if (rrc_result_is_error(update_res))
+        {
+            rrc_result_error_check_error_normal(update_res, xfb);
+        }
+        else if(any_updates)
+        {
+            char status_message[64];
+            snprintf(status_message, sizeof(status_message), "%d updates were installed.", update_count);
+            char *lines[] = {status_message, "", "The channel will now exit to apply the updates."};
+            rrc_prompt_1_option(xfb, lines, 3, "OK");
+            exit(0);
+        }
     }
 
 #define INTERRUPT_TIME 5000000 /* 5 seconds */
     rrc_con_clear(true);
 
-    if(!first_open) {
+    if (!first_open)
+    {
         rrc_con_print_text_centered(_RRC_ACTION_ROW, "Press A to launch, or press B to load settings.");
         rrc_con_print_text_centered(_RRC_ACTION_ROW + 1, "Auto-launching in 5 seconds...");
     }
