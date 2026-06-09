@@ -629,7 +629,7 @@ struct rrc_result rrc_update_do_updates(void *xfb, int *count, bool *updates_ins
     res = rrc_versionsfile_get_removed_files(&deleted_versionsfile);
     if (res < 0)
     {
-        RRC_FATAL("couldnt get files to remove! res: %i\n", res);
+        return rrc_result_create_error_curl(-res, "Failed to get files to remove.");
     }
 
     TRY(rrc_versionsfile_parse_deleted_files(deleted_versionsfile, &current, &deleted_files, &num_deleted_files));
